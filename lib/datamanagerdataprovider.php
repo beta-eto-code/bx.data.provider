@@ -114,6 +114,7 @@ class DataManagerDataProvider extends BaseDataProvider
     {
         $connectionName = $this->dataManagerClass::getConnectionName();
         Application::getConnection($connectionName)->startTransaction();
+        return true;
     }
 
     /**
@@ -124,6 +125,7 @@ class DataManagerDataProvider extends BaseDataProvider
     {
         $connectionName = $this->dataManagerClass::getConnectionName();
         Application::getConnection($connectionName)->commitTransaction();
+        return true;
     }
 
     /**
@@ -134,5 +136,6 @@ class DataManagerDataProvider extends BaseDataProvider
     {
         $connectionName = $this->dataManagerClass::getConnectionName();
         Application::getConnection($connectionName)->rollbackTransaction();
+        return true;
     }
 }
