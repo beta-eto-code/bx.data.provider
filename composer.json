@@ -11,7 +11,7 @@
     ],
     "require": {
         "php": ">=7.2",
-        "beta/data-provider": "^dev-master",
+        "beta/data-provider": "dev-master",
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-simplexml": "*",
