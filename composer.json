@@ -9,6 +9,7 @@
             "email": "alex19pov31@gmail.com"
         }
     ],
+    "minimum-stability": "dev",
     "require": {
         "php": ">=7.2",
         "beta/data-provider": "dev-master",
