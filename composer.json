@@ -12,16 +12,9 @@
     "minimum-stability": "dev",
     "require": {
         "php": ">=7.2",
-        "beta/data-provider": "dev-master",
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-simplexml": "*",
         "ext-dom": "*"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "git@github.com:beta-eto-code/data.provider.git"
-        }
-    ]
 }
