@@ -1,5 +1,5 @@
 {
-    "name": "beta/bx.router",
+    "name": "beta/bx.data.provider",
     "description": "Data provider for bitrix",
     "type": "bitrix-module",
     "license": "MIT",
