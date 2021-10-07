@@ -1,0 +1,26 @@
+{
+    "name": "beta/bx.router",
+    "description": "Data provider for bitrix",
+    "type": "bitrix-module",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alexander Nesterov",
+            "email": "alex19pov31@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "beta/data-provider": "^dev-master",
+        "ext-json": "*",
+        "ext-pdo": "*",
+        "ext-simplexml": "*",
+        "ext-dom": "*"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:beta-eto-code/data.provider.git"
+        }
+    ]
+}
