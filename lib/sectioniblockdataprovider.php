@@ -3,9 +3,10 @@
 namespace BX\Data\Provider;
 
 use Bitrix\Iblock\IblockTable;
+use Bitrix\Iblock\Model\Section;
 use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
-use Bitrix\Main\Db\SqlQueryException;
+use Bitrix\Main\DB\SqlQueryException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
@@ -14,9 +15,8 @@ use Bitrix\Main\SystemException;
 use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Providers\BaseDataProvider;
-use Exception;
 
-class IblockDataProvider extends BaseDataProvider
+class SectionIblockDataProvider extends BaseDataProvider
 {
     /**
      * @var DataManagerDataProvider
@@ -40,17 +40,22 @@ class IblockDataProvider extends BaseDataProvider
         parent::__construct('ID');
         Loader::includeModule('iblock');
         $iblock = IblockTable::getList([
+            'select' => [
+                'ID',
+            ],
             'filter' => [
                 '=IBLOCK_TYPE_ID' => $iblockType,
                 '=CODE' => $iblockCode,
             ],
             'limit' => 1,
         ])->fetchObject();
-        if (empty($iblock)) {
+
+        $iblockId = (int)$iblock['ID'];
+        if (empty($iblockId)) {
             throw new Exception('iblock is not found');
         }
 
-        $this->dataManagerClass = IblockTable::compileEntity($iblock)->getDataClass();
+        $this->dataManagerClass = Section::compileEntityByIblock($iblockId);
         $this->dataManagerProvider = new DataManagerDataProvider(
             $this->dataManagerClass,
             'ID'

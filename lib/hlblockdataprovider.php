@@ -2,30 +2,119 @@
 
 namespace BX\Data\Provider;
 
+use Bitrix\Highloadblock\HighloadBlockTable;
+use Bitrix\Main\Application;
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\DB\SqlQueryException;
+use Bitrix\Main\Loader;
+use Bitrix\Main\LoaderException;
+use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\ORM\Data\DataManager;
+use Bitrix\Main\SystemException;
 use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Providers\BaseDataProvider;
+use Exception;
 
 class HlBlockDataProvider extends BaseDataProvider
 {
+    /**
+     * @var DataManager|string
+     */
+    private $dataManagerClass;
+    /**
+     * @var DataManagerDataProvider
+     */
+    private $dataManagerProvider;
+
+    /**
+     * @param array $hlBlockInfo
+     * @throws SystemException
+     */
     private function __construct(array $hlBlockInfo)
     {
         parent::__construct('ID');
+        $this->dataManagerClass = HighloadBlockTable::compileEntity($hlBlockInfo)->getDataClass();
+        $this->dataManagerProvider = new DataManagerDataProvider(
+            $this->dataManagerClass,
+            'ID'
+        );
     }
 
+    /**
+     * @param string $tableName
+     * @return HlBlockDataProvider
+     * @throws ArgumentException
+     * @throws LoaderException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws Exception
+     */
     public static function initByTableName(string $tableName): HlBlockDataProvider
     {
+        Loader::includeModule('highloadblock');
+        $hlBlockInfo = HighloadBlockTable::getList([
+            'filter' => [
+                '=TABLE_NAME' => $tableName,
+            ],
+            'limit' => 1,
+        ])->fetch();
+        if (empty($hlBlockInfo)) {
+            throw new Exception('hlblock is not found');
+        }
 
+        return new static($hlBlockInfo);
     }
 
+    /**
+     * @param string $hlName
+     * @return HlBlockDataProvider
+     * @throws ArgumentException
+     * @throws LoaderException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws Exception
+     */
     public static function initByHlName(string $hlName): HlBlockDataProvider
     {
+        Loader::includeModule('highloadblock');
+        $hlBlockInfo = HighloadBlockTable::getList([
+            'filter' => [
+                '=NAME' => $hlName,
+            ],
+            'limit' => 1,
+        ])->fetch();
+        if (empty($hlBlockInfo)) {
+            throw new Exception('hlblock is not found');
+        }
 
+        return new static($hlBlockInfo);
     }
 
+    /**
+     * @param int $hlBlockId
+     * @return HlBlockDataProvider
+     * @throws ArgumentException
+     * @throws LoaderException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws Exception
+     */
     public static function initById(int $hlBlockId): HlBlockDataProvider
     {
 
+        Loader::includeModule('highloadblock');
+        $hlBlockInfo = HighloadBlockTable::getList([
+            'filter' => [
+                '=ID' => $hlBlockId,
+            ],
+            'limit' => 1,
+        ])->fetch();
+        if (empty($hlBlockInfo)) {
+            throw new Exception('hlblock is not found');
+        }
+
+        return new static($hlBlockInfo);
     }
 
     /**
@@ -34,7 +123,7 @@ class HlBlockDataProvider extends BaseDataProvider
      */
     protected function getDataInternal(QueryCriteriaInterface $query): array
     {
-        // TODO: Implement getDataInternal() method.
+        return $this->dataManagerProvider->getData($query);
     }
 
     /**
@@ -44,7 +133,7 @@ class HlBlockDataProvider extends BaseDataProvider
      */
     protected function saveInternal(array $data, QueryCriteriaInterface $query = null): OperationResultInterface
     {
-        // TODO: Implement saveInternal() method.
+        return $this->dataManagerProvider->save($data, $query);
     }
 
     /**
@@ -52,48 +141,58 @@ class HlBlockDataProvider extends BaseDataProvider
      */
     public function getSourceName(): string
     {
-        // TODO: Implement getSourceName() method.
+        return $this->dataManagerClass;
     }
 
     /**
      * @param QueryCriteriaInterface $query
      * @return int
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
      */
     public function getDataCount(QueryCriteriaInterface $query): int
     {
-        // TODO: Implement getDataCount() method.
+        return $this->dataManagerProvider->getDataCount($query);
     }
 
     /**
      * @param QueryCriteriaInterface $query
      * @return OperationResultInterface
+     * @throws Exception
      */
     public function remove(QueryCriteriaInterface $query): OperationResultInterface
     {
-        // TODO: Implement remove() method.
+        return $this->dataManagerProvider->remove($query);
     }
 
     /**
      * @return bool
+     * @throws SqlQueryException
      */
     public function startTransaction(): bool
     {
-        // TODO: Implement startTransaction() method.
+        Application::getConnection()->startTransaction();
+        return true;
     }
 
     /**
      * @return bool
+     * @throws SqlQueryException
      */
     public function commitTransaction(): bool
     {
-        // TODO: Implement commitTransaction() method.
+        Application::getConnection()->commitTransaction();
+        return true;
     }
 
     /**
      * @return bool
+     * @throws SqlQueryException
      */
     public function rollbackTransaction(): bool
     {
-        // TODO: Implement rollbackTransaction() method.
+        Application::getConnection()->rollbackTransaction();
+        return true;
     }
 }
