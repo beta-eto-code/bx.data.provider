@@ -2,15 +2,52 @@
 
 namespace BX\Data\Provider;
 
+use Bitrix\Iblock\IblockTable;
+use Bitrix\Main\Application;
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Db\SqlQueryException;
+use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\ORM\Data\DataManager;
+use Bitrix\Main\SystemException;
 use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Providers\BaseDataProvider;
+use mysql_xdevapi\Exception;
 
 class IblockDataProvider extends BaseDataProvider
 {
+    /**
+     * @var DataManagerDataProvider
+     */
+    private $dataManagerProvider;
+    /**
+     * @var DataManager
+     */
+    private $dataMangerClass;
+
+    /**
+     * @param string $iblockType
+     * @param string $iblockCode
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
     public function __construct(string $iblockType, string $iblockCode)
     {
         parent::__construct('ID');
+        $iblock = IblockTable::getList([
+            '=IBLOCK_TYPE_ID' => $iblockType,
+            '=CODE' => $iblockCode,
+        ])->fetchObject();
+        if (empty($iblock)) {
+            throw new Exception('iblock is not found');
+        }
+
+        $this->dataMangerClass = IblockTable::compileEntity($iblock)->getDataClass();
+        $this->dataManagerProvider = new DataManagerDataProvider(
+            $this->dataMangerClass,
+            'ID'
+        );
     }
 
     /**
@@ -19,7 +56,7 @@ class IblockDataProvider extends BaseDataProvider
      */
     protected function getDataInternal(QueryCriteriaInterface $query): array
     {
-        // TODO: Implement getDataInternal() method.
+        return $this->dataManagerProvider->getData($query);
     }
 
     /**
@@ -29,7 +66,7 @@ class IblockDataProvider extends BaseDataProvider
      */
     protected function saveInternal(array $data, QueryCriteriaInterface $query = null): OperationResultInterface
     {
-        // TODO: Implement saveInternal() method.
+        return $this->dataManagerProvider->save($data, $query);
     }
 
     /**
@@ -37,48 +74,58 @@ class IblockDataProvider extends BaseDataProvider
      */
     public function getSourceName(): string
     {
-        // TODO: Implement getSourceName() method.
+        return $this->dataMangerClass;
     }
 
     /**
      * @param QueryCriteriaInterface $query
      * @return int
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
      */
     public function getDataCount(QueryCriteriaInterface $query): int
     {
-        // TODO: Implement getDataCount() method.
+        return $this->dataManagerProvider->getDataCount($query);
     }
 
     /**
      * @param QueryCriteriaInterface $query
      * @return OperationResultInterface
+     * @throws \Exception
      */
     public function remove(QueryCriteriaInterface $query): OperationResultInterface
     {
-        // TODO: Implement remove() method.
+        return $this->dataManagerProvider->remove($query);
     }
 
     /**
      * @return bool
+     * @throws SqlQueryException
      */
     public function startTransaction(): bool
     {
-        // TODO: Implement startTransaction() method.
+        Application::getConnection()->startTransaction();
+        return true;
     }
 
     /**
      * @return bool
+     * @throws SqlQueryException
      */
     public function commitTransaction(): bool
     {
-        // TODO: Implement commitTransaction() method.
+        Application::getConnection()->commitTransaction();
+        return true;
     }
 
     /**
      * @return bool
+     * @throws SqlQueryException
      */
     public function rollbackTransaction(): bool
     {
-        // TODO: Implement rollbackTransaction() method.
+        Application::getConnection()->rollbackTransaction();
+        return true;
     }
 }
