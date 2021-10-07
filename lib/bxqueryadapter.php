@@ -33,7 +33,7 @@ class BxQueryAdapter
     {
         $filter = [];
         foreach ($this->query->getCriteriaList() as $compareRule) {
-            $operation = $compareRule;
+            $operation = $compareRule->getOperation();
             $key = $compareRule->getKey();
             $value = $compareRule->getCompareValue();
 
