@@ -104,6 +104,72 @@ class BxQueryAdapter
     }
 
     /**
+     * @param string|null $pkName
+     * @return bool
+     */
+    public function isEqualPkQuery(string $pkName = null): bool
+    {
+        if (empty($pkName)) {
+            return false;
+        }
+
+        $criteriaList = $this->query->getCriteriaList();
+        $countCriteria = count($criteriaList);
+        if ($countCriteria > 1 || $countCriteria === 0) {
+            return false;
+        }
+
+        $compareRule = current($criteriaList);
+        if ($compareRule->getOperation() !== CompareRuleInterface::EQUAL) {
+            return false;
+        }
+
+        if ($compareRule->getKey() !== $pkName) {
+            return false;
+        }
+
+        if (empty($compareRule->getCompareValue())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string|null $pkName
+     * @param string $operation
+     * @return array|mixed|null
+     */
+    public function getPkValueFromQuery(string $pkName = null, string $operation = CompareRuleInterface::EQUAL)
+    {
+        if (empty($pkName)) {
+            return null;
+        }
+
+        $criteriaList = $this->query->getCriteriaList();
+        if (empty($criteriaList)) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($criteriaList as $compareRule) {
+            if ($compareRule->getOperation() === $operation && $compareRule->getKey() === $pkName) {
+                $result[] = $compareRule->getCompareValue();
+            }
+        }
+
+        if (empty($result)) {
+            return null;
+        }
+
+        if (count($result) === 1) {
+            return current($result);
+        }
+
+        return $result;
+    }
+
+    /**
      * @return array
      */
     public function toArray(): array

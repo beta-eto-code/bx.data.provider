@@ -6,6 +6,7 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Data\Connection;
 use Bitrix\Main\Db\SqlQueryException;
 use Data\Provider\Interfaces\OperationResultInterface;
+use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Interfaces\SqlBuilderInterface;
 use Data\Provider\OperationResult;
@@ -69,10 +70,10 @@ class BxConnectionDataProvider extends BaseDataProvider
     /**
      * @param array $data
      * @param QueryCriteriaInterface|null $query
-     * @return OperationResultInterface|array
+     * @return PkOperationResultInterface
      * @throws SqlQueryException
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): OperationResultInterface
+    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
             $sqlQuery = $this->sqlBuilder->buildInsertQuery($data, $this->tableName, false);

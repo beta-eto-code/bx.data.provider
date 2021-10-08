@@ -8,7 +8,9 @@ use Bitrix\Main\Db\SqlQueryException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\SystemException;
+use Data\Provider\Interfaces\CompareRuleInterface;
 use Data\Provider\Interfaces\OperationResultInterface;
+use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
 use Data\Provider\Providers\BaseDataProvider;
@@ -42,17 +44,46 @@ class DataManagerDataProvider extends BaseDataProvider
     }
 
     /**
+     * @param BxQueryAdapter $bxQuery
+     * @return array
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    protected function getPkValuesByQuery(BxQueryAdapter $bxQuery): array
+    {
+        $pkName = $this->getPkName();
+
+        if ($bxQuery->isEqualPkQuery($pkName)) {
+            $result = $bxQuery->getPkValueFromQuery($pkName, CompareRuleInterface::EQUAL);
+
+            return empty($result) ? [] : (array)$result;
+        }
+
+        if (empty($pkName)) {
+            return [];
+        }
+
+        $params = $bxQuery->toArray();
+        $params['select'] = [$pkName];
+        return array_column(
+            $this->dataManagerClass::getList($params)->fetchAll(),
+            $pkName
+        );
+    }
+
+    /**
      * @param array $data
      * @param QueryCriteriaInterface|null $query
-     * @return OperationResultInterface|array
+     * @return PkOperationResultInterface
      * @throws Exception
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): OperationResultInterface
+    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
             $addResult = $this->dataManagerClass::add($data);
             if ($addResult->isSuccess()) {
-                return new OperationResult(null, ['data' => $data]);
+                return new OperationResult(null, ['data' => $data], $addResult->getId());
             }
 
             return new OperationResult(
@@ -60,6 +91,37 @@ class DataManagerDataProvider extends BaseDataProvider
                 ['data' => $data]
             );
         }
+
+        $errorMessage = 'Данные для обновления не найдены';
+        $pkName = $this->getPkName();
+        if (empty($pkName)) {
+            return new OperationResult(
+                $errorMessage,
+                [
+                    'data' => $data,
+                    'query' => $query
+                ]
+            );
+        }
+
+        $bxQuery = BxQueryAdapter::init($query);
+        $pkListForUpdate = $this->getPkValuesByQuery($bxQuery);
+
+        if (empty($pkListForUpdate)) {
+            return new OperationResult(
+                $errorMessage,
+                [
+                    'data' => $data,
+                    'query' => $query
+                ]
+            );
+        }
+
+        foreach ($pkListForUpdate as $pkValue) {
+            $this->dataManagerClass::update($pkValue, $data);
+        }
+
+        return new OperationResult(null, ['query' => $query, 'data' => $data]);
     }
 
     /**
@@ -92,14 +154,13 @@ class DataManagerDataProvider extends BaseDataProvider
      */
     public function remove(QueryCriteriaInterface $query): OperationResultInterface
     {
-        $dataList = $this->getData($query);
+        $bxQuery = BxQueryAdapter::init($query);
+        $pkListForDelete = $this->getPkValuesByQuery($bxQuery);
+        if (empty($pkListForDelete)) {
+            return new OperationResult('Данные для удаления не найдены', ['query' => $query]);
+        }
 
-        foreach ($dataList as $item) {
-            $pkValue = $item[$this->pkName] ?? null;
-            if (empty($pkValue)) {
-                return new OperationResult('Ошибка удаления данных', ['query' => $query]);
-            }
-
+        foreach ($pkListForDelete as $pkValue) {
             $this->dataManagerClass::delete($pkValue);
         }
 

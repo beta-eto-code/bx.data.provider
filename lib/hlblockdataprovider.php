@@ -12,6 +12,7 @@ use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\SystemException;
 use Data\Provider\Interfaces\OperationResultInterface;
+use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Providers\BaseDataProvider;
 use Exception;
@@ -129,9 +130,9 @@ class HlBlockDataProvider extends BaseDataProvider
     /**
      * @param array $data
      * @param QueryCriteriaInterface|null $query
-     * @return OperationResultInterface|array
+     * @return PkOperationResultInterface
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): OperationResultInterface
+    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         return $this->dataManagerProvider->save($data, $query);
     }
