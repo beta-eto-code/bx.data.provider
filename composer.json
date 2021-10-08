@@ -9,12 +9,18 @@
             "email": "alex19pov31@gmail.com"
         }
     ],
-    "minimum-stability": "dev",
     "require": {
         "php": ">=7.2",
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-simplexml": "*",
-        "ext-dom": "*"
-    }
+        "ext-dom": "*",
+        "beta/data.provider": "^1.0"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:beta-eto-code/data.provider.git"
+        }
+    ]
 }

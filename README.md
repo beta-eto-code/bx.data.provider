@@ -29,7 +29,7 @@ $newsProvider->setMapperForRead(function (array $data): array {     // зада�
         'id' => (int)$data['ID'],
         'name' => $data['NAME'],
         'code' => $data['CODE'],
-        'content' => urlencode($data['DETAIL_TEXT']),
+        'content' => $data['DETAIL_TEXT'],
     ];
 });
 
