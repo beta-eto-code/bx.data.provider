@@ -2,31 +2,26 @@
 
 namespace BX\Data\Provider;
 
+use ArrayObject;
+use Bitrix\Crm\ConfigChecker\Iterator;
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Iblock\Model\Section;
-use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
-use Bitrix\Main\DB\SqlQueryException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
-use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\SystemException;
-use Data\Provider\Interfaces\OperationResultInterface;
+use CIBlockSection;
+use Data\Provider\Interfaces\CompareRuleInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
-use Data\Provider\Providers\BaseDataProvider;
+use Data\Provider\OperationResult;
+use Data\Provider\QueryCriteria;
+use Exception;
 
-class SectionIblockDataProvider extends BaseDataProvider
+class SectionIblockDataProvider extends DataManagerDataProvider
 {
-    /**
-     * @var DataManagerDataProvider
-     */
-    private $dataManagerProvider;
-    /**
-     * @var DataManager|string
-     */
-    private $dataManagerClass;
+    private $iblockId;
 
     /**
      * @param string $iblockType
@@ -51,94 +46,85 @@ class SectionIblockDataProvider extends BaseDataProvider
             'limit' => 1,
         ])->fetchObject();
 
-        $iblockId = (int)$iblock['ID'];
-        if (empty($iblockId)) {
+        $this->iblockId = (int)$iblock['ID'];
+        if (empty($this->iblockId)) {
             throw new Exception('iblock is not found');
         }
 
-        $this->dataManagerClass = Section::compileEntityByIblock($iblockId);
-        $this->dataManagerProvider = new DataManagerDataProvider(
-            $this->dataManagerClass,
-            'ID'
-        );
+        $dataManagerClass = Section::compileEntityByIblock($this->iblockId);
+        parent::__construct($dataManagerClass);
+
     }
 
-    /**
-     * @param QueryCriteriaInterface $query
-     * @return array
-     */
-    protected function getDataInternal(QueryCriteriaInterface $query): array
+    public function getIterator(QueryCriteriaInterface $query): \Iterator
     {
-        return $this->dataManagerProvider->getData($query);
+        $query = $query ?? new QueryCriteria();
+        $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
+
+        return parent::getIterator($query);
+    }
+
+    public function getData(QueryCriteriaInterface $query = null): array
+    {
+        $query = $query ?? new QueryCriteria();
+        $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
+        return parent::getData($query);
     }
 
     /**
-     * @param array $data
+     * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
-     */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
-    {
-        return $this->dataManagerProvider->save($data, $query);
-    }
-
-    /**
-     * @return string
-     */
-    public function getSourceName(): string
-    {
-        return $this->dataManagerClass;
-    }
-
-    /**
-     * @param QueryCriteriaInterface $query
-     * @return int
-     * @throws ArgumentException
-     * @throws ObjectPropertyException
-     * @throws SystemException
-     */
-    public function getDataCount(QueryCriteriaInterface $query): int
-    {
-        return $this->dataManagerProvider->getDataCount($query);
-    }
-
-    /**
-     * @param QueryCriteriaInterface $query
-     * @return OperationResultInterface
      * @throws Exception
      */
-    public function remove(QueryCriteriaInterface $query): OperationResultInterface
+    protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
-        return $this->dataManagerProvider->remove($query);
-    }
+        $data['IBLOCK_ID'] = $this->iblockId;
+        $oSection = new CIBlockSection;
+        if (empty($query)) {
+            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $id = (int)$oSection->Add($dataForSave);
+            if ($id) {
+                $data[$this->getPkName()] = $id;
+                return new OperationResult(null, ['data' => $data], $id);
+            }
 
-    /**
-     * @return bool
-     * @throws SqlQueryException
-     */
-    public function startTransaction(): bool
-    {
-        Application::getConnection()->startTransaction();
-        return true;
-    }
+            return new OperationResult(
+                $oSection->LAST_ERROR,
+                ['data' => $data]
+            );
+        }
 
-    /**
-     * @return bool
-     * @throws SqlQueryException
-     */
-    public function commitTransaction(): bool
-    {
-        Application::getConnection()->commitTransaction();
-        return true;
-    }
+        $errorMessage = 'Данные для обновления не найдены';
+        $pkName = $this->getPkName();
+        if (empty($pkName)) {
+            return new OperationResult(
+                $errorMessage,
+                [
+                    'data' => $data,
+                    'query' => $query
+                ]
+            );
+        }
 
-    /**
-     * @return bool
-     * @throws SqlQueryException
-     */
-    public function rollbackTransaction(): bool
-    {
-        Application::getConnection()->rollbackTransaction();
-        return true;
+        $bxQuery = BxQueryAdapter::init($query);
+        $pkListForUpdate = $this->getPkValuesByQuery($bxQuery);
+
+        if (empty($pkListForUpdate)) {
+            return new OperationResult(
+                $errorMessage,
+                [
+                    'data' => $data,
+                    'query' => $query
+                ]
+            );
+        }
+
+        foreach ($pkListForUpdate as $pkValue) {
+            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $oSection->Update($pkValue, $dataForSave);
+        }
+
+        return new OperationResult($oSection->LAST_ERROR, ['query' => $query, 'data' => $data]);
     }
 }

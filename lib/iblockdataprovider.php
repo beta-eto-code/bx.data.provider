@@ -2,22 +2,23 @@
 
 namespace BX\Data\Provider;
 
+use ArrayObject;
 use Bitrix\Iblock\IblockTable;
-use Bitrix\Main\Application;
+use Bitrix\Iblock\ORM\ElementEntity;
 use Bitrix\Main\ArgumentException;
-use Bitrix\Main\Db\SqlQueryException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Data\DataManager;
+use Bitrix\Main\ORM\Objectify\EntityObject;
+use Bitrix\Main\ORM\Objectify\State;
 use Bitrix\Main\SystemException;
-use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
-use Data\Provider\Providers\BaseDataProvider;
+use Data\Provider\OperationResult;
 use Exception;
 
-class IblockDataProvider extends BaseDataProvider
+class IblockDataProvider extends DataManagerDataProvider
 {
     /**
      * @var DataManagerDataProvider
@@ -27,6 +28,10 @@ class IblockDataProvider extends BaseDataProvider
      * @var DataManager|string
      */
     private $dataManagerClass;
+    /**
+     * @var ElementEntity|false
+     */
+    private $elementEntity;
 
     /**
      * @param string $iblockType
@@ -38,7 +43,6 @@ class IblockDataProvider extends BaseDataProvider
      */
     public function __construct(string $iblockType, string $iblockCode)
     {
-        parent::__construct('ID');
         Loader::includeModule('iblock');
         $iblock = IblockTable::getList([
             'filter' => [
@@ -51,89 +55,95 @@ class IblockDataProvider extends BaseDataProvider
             throw new Exception('iblock is not found');
         }
 
-        $this->dataManagerClass = IblockTable::compileEntity($iblock)->getDataClass();
-        $this->dataManagerProvider = new DataManagerDataProvider(
-            $this->dataManagerClass,
-            'ID'
-        );
+        $this->elementEntity = IblockTable::compileEntity($iblock);
+        parent::__construct($this->elementEntity->getDataClass());
     }
 
     /**
-     * @param QueryCriteriaInterface $query
-     * @return array
+     * @param $data
+     * @param int|null $pk
+     * @return EntityObject
+     * @throws ArgumentException
+     * @throws SystemException
      */
-    protected function getDataInternal(QueryCriteriaInterface $query): array
+    private function initItem($data, int $pk = null): EntityObject
     {
-        return $this->dataManagerProvider->getData($query);
+        $item = $this->elementEntity->createObject();
+        if ((int)$pk > 0 ) {
+            $item->setId($pk);
+            $item->sysChangeState(State::CHANGED);
+        }
+
+        $search = '_VALUE';
+        foreach ($data as $key => $value) {
+            if (strpos($key, $search)) {
+                $key = str_replace($search, '', $key);
+            }
+
+            if ($key !== 'ID' && !is_null($value)) {
+                $item->set($key, $value ?? '');
+            }
+        }
+
+        return $item;
     }
 
     /**
-     * @param array $data
+     * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
-     */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
-    {
-        return $this->dataManagerProvider->save($data, $query);
-    }
-
-    /**
-     * @return string
-     */
-    public function getSourceName(): string
-    {
-        return $this->dataManagerClass;
-    }
-
-    /**
-     * @param QueryCriteriaInterface $query
-     * @return int
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
      */
-    public function getDataCount(QueryCriteriaInterface $query): int
+    protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
-        return $this->dataManagerProvider->getDataCount($query);
-    }
+        if (empty($query)) {
+            $item = $this->initItem($data);
+            $addResult = $item->save();
+            if ($addResult->isSuccess()) {
+                $pkValue = $addResult->getId();
+                $data[$this->getPkName()] = $pkValue;
 
-    /**
-     * @param QueryCriteriaInterface $query
-     * @return OperationResultInterface
-     * @throws Exception
-     */
-    public function remove(QueryCriteriaInterface $query): OperationResultInterface
-    {
-        return $this->dataManagerProvider->remove($query);
-    }
+                return new OperationResult(null, ['data' => $data], $pkValue);
+            }
 
-    /**
-     * @return bool
-     * @throws SqlQueryException
-     */
-    public function startTransaction(): bool
-    {
-        Application::getConnection()->startTransaction();
-        return true;
-    }
+            return new OperationResult(
+                implode(', ', $addResult->getErrorMessages()),
+                ['data' => $data]
+            );
+        }
 
-    /**
-     * @return bool
-     * @throws SqlQueryException
-     */
-    public function commitTransaction(): bool
-    {
-        Application::getConnection()->commitTransaction();
-        return true;
-    }
+        $errorMessage = 'Данные для обновления не найдены';
+        $pkName = $this->getPkName();
+        if (empty($pkName)) {
+            return new OperationResult(
+                $errorMessage,
+                [
+                    'data' => $data,
+                    'query' => $query
+                ]
+            );
+        }
 
-    /**
-     * @return bool
-     * @throws SqlQueryException
-     */
-    public function rollbackTransaction(): bool
-    {
-        Application::getConnection()->rollbackTransaction();
-        return true;
+        $bxQuery = BxQueryAdapter::init($query);
+        $pkListForUpdate = $this->getPkValuesByQuery($bxQuery);
+
+        if (empty($pkListForUpdate)) {
+            return new OperationResult(
+                $errorMessage,
+                [
+                    'data' => $data,
+                    'query' => $query
+                ]
+            );
+        }
+
+        foreach ($pkListForUpdate as $pkValue) {
+            $item = $this->initItem($data, (int)$pkValue);
+            $item->save();
+        }
+
+        return new OperationResult(null, ['query' => $query, 'data' => $data]);
     }
 }

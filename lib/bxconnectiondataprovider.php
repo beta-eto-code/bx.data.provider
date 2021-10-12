@@ -2,6 +2,7 @@
 
 namespace BX\Data\Provider;
 
+use ArrayObject;
 use Bitrix\Main\Application;
 use Bitrix\Main\Data\Connection;
 use Bitrix\Main\Db\SqlQueryException;
@@ -9,23 +10,27 @@ use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Interfaces\SqlBuilderInterface;
+use Data\Provider\Interfaces\SqlRelationProviderInterface;
 use Data\Provider\OperationResult;
 use Data\Provider\Providers\BaseDataProvider;
+use Data\Provider\QueryCriteria;
+use EmptyIterator;
+use Iterator;
 
-class BxConnectionDataProvider extends BaseDataProvider
+class BxConnectionDataProvider extends BaseDataProvider implements SqlRelationProviderInterface
 {
     /**
      * @var string
      */
-    private $tableName;
+    protected $tableName;
     /**
      * @var SqlBuilderInterface
      */
-    private $sqlBuilder;
+    protected $sqlBuilder;
     /**
      * @var Connection|\Bitrix\Main\DB\Connection
      */
-    private $connection;
+    protected $connection;
 
     public function __construct(
         SqlBuilderInterface $sqlBuilder,
@@ -41,24 +46,31 @@ class BxConnectionDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param QueryCriteriaInterface $query
-     * @return array
+     * @param QueryCriteriaInterface|null $query
+     * @return Iterator
      * @throws SqlQueryException
      */
-    protected function getDataInternal(QueryCriteriaInterface $query): array
+    protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
+        $query = $query ?? new QueryCriteria();
         $sqlQuery = $this->sqlBuilder->buildSelectQuery($query, $this->tableName, false);
         $queryResult = $this->connection->query((string)$sqlQuery);
 
-        return $queryResult->fetchAll();
+        while($item = $queryResult->fetch()) {
+            yield $item;
+        }
+
+        return new EmptyIterator();
     }
 
     /**
-     * @param QueryCriteriaInterface $query
+     * @param QueryCriteriaInterface|null $query
      * @return int
+     * @throws SqlQueryException
      */
-    public function getDataCount(QueryCriteriaInterface $query): int
+    public function getDataCount(QueryCriteriaInterface $query = null): int
     {
+        $query = $query ?? new QueryCriteria();
         $whereBlock = $this->sqlBuilder->buildWhereBlock($query, false);
         $sql = "SELECT COUNT(*) as cnt FROM {$this->tableName} {$whereBlock}";
         $queryResult = $this->connection->query((string)$sql);
@@ -68,12 +80,12 @@ class BxConnectionDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param array $data
+     * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
      * @throws SqlQueryException
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
+    protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
             $sqlQuery = $this->sqlBuilder->buildInsertQuery($data, $this->tableName, false);
@@ -145,5 +157,10 @@ class BxConnectionDataProvider extends BaseDataProvider
     {
         $this->connection->rollbackTransaction();
         return true;
+    }
+
+    public function getTableName(): string
+    {
+        return $this->tableName;
     }
 }

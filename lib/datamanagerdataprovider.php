@@ -2,6 +2,7 @@
 
 namespace BX\Data\Provider;
 
+use ArrayObject;
 use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Db\SqlQueryException;
@@ -14,7 +15,9 @@ use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
 use Data\Provider\Providers\BaseDataProvider;
+use EmptyIterator;
 use Exception;
+use Iterator;
 
 class DataManagerDataProvider extends BaseDataProvider
 {
@@ -23,24 +26,33 @@ class DataManagerDataProvider extends BaseDataProvider
      */
     private $dataManagerClass;
 
-    public function __construct(string $className, string $pkName = 'ID')
+    /**
+     * @param string|DataManager $className
+     * @param string $pkName
+     */
+    public function __construct($className, string $pkName = 'ID')
     {
         parent::__construct($pkName);
         $this->dataManagerClass = $className;
     }
 
     /**
-     * @param QueryCriteriaInterface $query
-     * @return array
+     * @param QueryCriteriaInterface|null $query
+     * @return Iterator
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
      */
-    protected function getDataInternal(QueryCriteriaInterface $query): array
+    protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
-        return $this->dataManagerClass::getList(
-            BxQueryAdapter::init($query)->toArray()
-        )->fetchAll();
+        $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
+        $resultQuery = $this->dataManagerClass::getList($params);
+
+        while ($item = $resultQuery->fetch()) {
+            yield $item;
+        }
+
+        return new EmptyIterator();
     }
 
     /**
@@ -73,17 +85,21 @@ class DataManagerDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param array $data
+     * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
      * @throws Exception
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
+    protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
-            $addResult = $this->dataManagerClass::add($data);
+            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $addResult = $this->dataManagerClass::add($dataForSave);
             if ($addResult->isSuccess()) {
-                return new OperationResult(null, ['data' => $data], $addResult->getId());
+                $pkValue = $addResult->getId();
+                $data[$this->getPkName()] = $pkValue;
+
+                return new OperationResult(null, ['data' => $data], $pkValue);
             }
 
             return new OperationResult(
@@ -118,7 +134,8 @@ class DataManagerDataProvider extends BaseDataProvider
         }
 
         foreach ($pkListForUpdate as $pkValue) {
-            $this->dataManagerClass::update($pkValue, $data);
+            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $this->dataManagerClass::update($pkValue, $dataForSave);
         }
 
         return new OperationResult(null, ['query' => $query, 'data' => $data]);
@@ -133,15 +150,15 @@ class DataManagerDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param QueryCriteriaInterface $query
+     * @param QueryCriteriaInterface|null $query
      * @return int
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
      */
-    public function getDataCount(QueryCriteriaInterface $query): int
+    public function getDataCount(QueryCriteriaInterface $query = null): int
     {
-        $params = BxQueryAdapter::init($query)->toArray();
+        $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
         $params['count_total'] = true;
 
         return $this->dataManagerClass::getList($params)->getCount();

@@ -2,6 +2,7 @@
 
 namespace BX\Data\Provider;
 
+use ArrayObject;
 use Bitrix\Highloadblock\HighloadBlockTable;
 use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
@@ -16,6 +17,7 @@ use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Providers\BaseDataProvider;
 use Exception;
+use Iterator;
 
 class HlBlockDataProvider extends BaseDataProvider
 {
@@ -119,20 +121,20 @@ class HlBlockDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param QueryCriteriaInterface $query
-     * @return array
+     * @param QueryCriteriaInterface|null $query
+     * @return Iterator
      */
-    protected function getDataInternal(QueryCriteriaInterface $query): array
+    protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
-        return $this->dataManagerProvider->getData($query);
+        return $this->dataManagerProvider->getIterator($query);
     }
 
     /**
-     * @param array $data
+     * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
+    protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         return $this->dataManagerProvider->save($data, $query);
     }
@@ -146,13 +148,13 @@ class HlBlockDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param QueryCriteriaInterface $query
+     * @param QueryCriteriaInterface|null $query
      * @return int
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
      */
-    public function getDataCount(QueryCriteriaInterface $query): int
+    public function getDataCount(QueryCriteriaInterface $query = null): int
     {
         return $this->dataManagerProvider->getDataCount($query);
     }

@@ -2,6 +2,8 @@
 
 namespace BX\Data\Provider;
 
+use ArrayObject;
+use Bitrix\Crm\ConfigChecker\Iterator;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
@@ -19,21 +21,24 @@ class UserDataProvider extends DataManagerDataProvider
     }
 
     /**
-     * @param array $data
+     * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
      */
-    protected function saveInternal(array $data, QueryCriteriaInterface $query = null): PkOperationResultInterface
+    protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
             $oUser = new \CUser();
-            $id = (int)$oUser->Add($data);
+            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $id = (int)$oUser->Add($dataForSave);
             if ($id === 0) {
                 return new OperationResult($oUser->LAST_ERROR, ['data' => $data]);
             }
+
+            $data[$this->getPkName()] = $id;
 
             return new OperationResult(null, ['data' => $data], $id);
         }
@@ -53,7 +58,8 @@ class UserDataProvider extends DataManagerDataProvider
 
         $oUser = new \CUser();
         foreach ($pkValuesForUpdate as $pkValue) {
-            $oUser->Update($pkValue, $data);
+            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $oUser->Update($pkValue, $dataForSave);
         }
 
         return new OperationResult(null, ['query' => $query, 'data' => $data]);
