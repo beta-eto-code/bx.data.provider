@@ -71,6 +71,14 @@ class SectionIblockDataProvider extends DataManagerDataProvider
         return parent::getData($query);
     }
 
+    public function getDataCount(QueryCriteriaInterface $query = null): int
+    {
+        $query = $query ?? new QueryCriteria();
+        $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
+
+        return parent::getDataCount($query);
+    }
+
     /**
      * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
@@ -95,6 +103,7 @@ class SectionIblockDataProvider extends DataManagerDataProvider
             );
         }
 
+        $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
         $errorMessage = 'Данные для обновления не найдены';
         $pkName = $this->getPkName();
         if (empty($pkName)) {
