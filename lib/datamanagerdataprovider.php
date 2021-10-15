@@ -133,8 +133,8 @@ class DataManagerDataProvider extends BaseDataProvider
             $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
             $bxResult = $this->dataManagerClass::update($pkValue, $dataForSave);
             $updateResult = $bxResult->isSuccess() ?
-                new OperationResult('', $dataResult) :
-                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult);
+                new OperationResult('', $dataResult, $pkValue) :
+                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($updateResult);
@@ -187,8 +187,8 @@ class DataManagerDataProvider extends BaseDataProvider
         foreach ($pkListForDelete as $pkValue) {
             $bxResult = $this->dataManagerClass::delete($pkValue);
             $updateResult = $bxResult->isSuccess() ?
-                new OperationResult('', $dataResult) :
-                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult);
+                new OperationResult('', $dataResult, $pkValue) :
+                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($updateResult);

@@ -61,8 +61,8 @@ class UserDataProvider extends DataManagerDataProvider
             $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
             $isSuccess = (bool)$oUser->Update($pkValue, $dataForSave);
             $saveResult = $isSuccess ?
-                new OperationResult('', $dataResult) :
-                new OperationResult($oUser->LAST_ERROR, $dataResult);
+                new OperationResult('', $dataResult, $pkValue) :
+                new OperationResult($oUser->LAST_ERROR, $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($saveResult);
@@ -94,8 +94,8 @@ class UserDataProvider extends DataManagerDataProvider
         foreach ($pkListForDelete as $pkValue) {
             $isSuccess = (bool)\CUser::Delete($pkValue);
             $deleteResult = $isSuccess ?
-                new OperationResult('', $dataResult) :
-                new OperationResult('Ошибка удаления', $dataResult);
+                new OperationResult('', $dataResult, $pkValue) :
+                new OperationResult('Ошибка удаления', $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($deleteResult);

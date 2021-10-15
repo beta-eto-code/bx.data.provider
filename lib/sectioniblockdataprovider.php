@@ -131,8 +131,8 @@ class SectionIblockDataProvider extends DataManagerDataProvider
             $dataForSave = $data instanceof ArrayObject ? iterator_to_array($data) : $data;
             $isSuccess = (bool)$oSection->Update($pkValue, $dataForSave);
             $saveResult = $isSuccess ?
-                new OperationResult('', $dataResult) :
-                new OperationResult($oSection->LAST_ERROR, $dataResult);
+                new OperationResult('', $dataResult, $pkValue) :
+                new OperationResult($oSection->LAST_ERROR, $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($saveResult);
@@ -161,10 +161,10 @@ class SectionIblockDataProvider extends DataManagerDataProvider
 
         $mainResult = null;
         foreach ($pkListForDelete as $pkValue) {
-            $isSuccess = CIBlockSection::Delete($pkValue);
+            $isSuccess = (bool)CIBlockSection::Delete($pkValue);
             $deleteResult = $isSuccess ?
-                new OperationResult('', $dataResult) :
-                new OperationResult('Ошибка удаления', $dataResult);
+                new OperationResult('', $dataResult, $pkValue) :
+                new OperationResult('Ошибка удаления', $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($deleteResult);
