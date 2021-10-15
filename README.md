@@ -55,3 +55,47 @@ $exportResult->getErrors();             // список ошибок
 $exportResult->getSourceData();         // данные для экспорта полученные от источника
 $exportResult->getUnimportedDataList(); // данные которые не удалось сохранить в json файл
 ```
+
+## BxQueryAdapter - адаптер параметров запроса Bitrix, пример использования
+
+```php
+use BX\Data\Provider\BxQueryAdapter;
+use Data\Provider\QueryCriteria;
+use Data\Provider\Providers\JsonDataProvider;
+use Data\Provider\Interfaces\CompareRuleInterface;
+
+$bxParams = [
+    'select' => ['NAME', 'CODE', 'ID'],
+    'filter' => [   
+        '=ACTIVE' => 'Y',
+        [
+            'LOGIC' => 'OR',
+            [
+                '=NAME' => 'test',
+            ],
+            [
+                '=NAME' => 'other',
+            ],
+        ],
+    ],
+    'limit' => 10,
+];
+
+$bxQuery = BxQueryAdapter::initFromArray($bxParams);
+$jsonProvider = new JsonDataProvider(
+    $_SERVER['DOCUMENT_ROOT'].'/users.json',    // указываем путь к json файлу
+    'id'                                        // указываем первичный ключ
+);
+
+$jsonProvider->getData($bxQuery->getQuery());   // данные из json файла
+
+$newQuery = new QueryCriteria();
+$newQuery->setSelect(['NAME', 'CODE', 'ID']);
+$newQuery->setLimit(10);
+$compareRule = $newQuery->addCriteria('ACTIVE', CompareRuleInterface::EQUAL, 'Y');
+$compareRule->and('NAME', CompareRuleInterface::EQUAL, 'test')
+    ->or('NAME', CompareRuleInterface::EQUAL, 'other');
+
+$newBxQuery = BxQueryAdapter::init($newQuery);
+$newBxQuery->toArray();     // результат будет аналогичен $bxParams
+```
