@@ -13,6 +13,7 @@ use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\ORM\Objectify\EntityObject;
 use Bitrix\Main\ORM\Objectify\State;
 use Bitrix\Main\SystemException;
+use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
@@ -99,30 +100,29 @@ class IblockDataProvider extends DataManagerDataProvider
     protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
+            $dataResult = ['data' => $data];
             $item = $this->initItem($data);
             $addResult = $item->save();
             if ($addResult->isSuccess()) {
                 $pkValue = $addResult->getId();
                 $data[$this->getPkName()] = $pkValue;
 
-                return new OperationResult(null, ['data' => $data], $pkValue);
+                return new OperationResult(null, $dataResult, $pkValue);
             }
 
             return new OperationResult(
                 implode(', ', $addResult->getErrorMessages()),
-                ['data' => $data]
+                $dataResult
             );
         }
 
+        $dataResult = ['query' => $query, 'data' => $data];
         $errorMessage = 'Данные для обновления не найдены';
         $pkName = $this->getPkName();
         if (empty($pkName)) {
             return new OperationResult(
                 $errorMessage,
-                [
-                    'data' => $data,
-                    'query' => $query
-                ]
+                $dataResult
             );
         }
 
@@ -132,18 +132,25 @@ class IblockDataProvider extends DataManagerDataProvider
         if (empty($pkListForUpdate)) {
             return new OperationResult(
                 $errorMessage,
-                [
-                    'data' => $data,
-                    'query' => $query
-                ]
+                $dataResult
             );
         }
 
+        $mainResult = null;
         foreach ($pkListForUpdate as $pkValue) {
             $item = $this->initItem($data, (int)$pkValue);
-            $item->save();
+            $bxResult = $item->save();
+            $saveResult = $bxResult->isSuccess() ?
+                new OperationResult('', $dataResult) :
+                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($saveResult);
+            } else {
+                $mainResult = $saveResult;
+            }
         }
 
-        return new OperationResult(null, ['query' => $query, 'data' => $data]);
+        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 }

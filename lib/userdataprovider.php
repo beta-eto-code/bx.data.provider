@@ -31,38 +31,47 @@ class UserDataProvider extends DataManagerDataProvider
     protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
+            $dataResult = ['data' => $data];
             $oUser = new \CUser();
             $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
             $id = (int)$oUser->Add($dataForSave);
             if ($id === 0) {
-                return new OperationResult($oUser->LAST_ERROR, ['data' => $data]);
+                return new OperationResult($oUser->LAST_ERROR, $dataResult);
             }
 
             $data[$this->getPkName()] = $id;
 
-            return new OperationResult(null, ['data' => $data], $id);
+            return new OperationResult(null, $dataResult, $id);
         }
 
+        $dataResult = ['query' => $query, 'data' => $data];
         $bxQuery = BxQueryAdapter::init($query);
         $pkValuesForUpdate = $this->getPkValuesByQuery($bxQuery);
 
         if (empty($pkValuesForUpdate)) {
             return new OperationResult(
                 'Пользователи для обновления не найдены',
-                [
-                    'query' => $query,
-                    'data' => $data
-                ]
+                $dataResult
             );
         }
 
         $oUser = new \CUser();
+        $mainResult = null;
         foreach ($pkValuesForUpdate as $pkValue) {
             $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
-            $oUser->Update($pkValue, $dataForSave);
+            $isSuccess = (bool)$oUser->Update($pkValue, $dataForSave);
+            $saveResult = $isSuccess ?
+                new OperationResult('', $dataResult) :
+                new OperationResult($oUser->LAST_ERROR, $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($saveResult);
+            } else {
+                $mainResult = $saveResult;
+            }
         }
 
-        return new OperationResult(null, ['query' => $query, 'data' => $data]);
+        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 
     /**
@@ -74,16 +83,27 @@ class UserDataProvider extends DataManagerDataProvider
      */
     public function remove(QueryCriteriaInterface $query): OperationResultInterface
     {
+        $dataResult = ['query' => $query];
         $bxQuery = BxQueryAdapter::init($query);
         $pkListForDelete = $this->getPkValuesByQuery($bxQuery);
         if (empty($pkListForDelete)) {
-            return new OperationResult('Пользователи для удаления не найдены', ['query' => $query]);
+            return new OperationResult('Пользователи для удаления не найдены', $dataResult);
         }
 
+        $mainResult = null;
         foreach ($pkListForDelete as $pkValue) {
-            \CUser::Delete($pkValue);
+            $isSuccess = (bool)\CUser::Delete($pkValue);
+            $deleteResult = $isSuccess ?
+                new OperationResult('', $dataResult) :
+                new OperationResult('Ошибка удаления', $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($deleteResult);
+            } else {
+                $mainResult = $deleteResult;
+            }
         }
 
-        return new OperationResult(null, ['query' => $query]);
+        return $mainResult ?? new OperationResult('Данные для удаления не найдены', $dataResult);
     }
 }

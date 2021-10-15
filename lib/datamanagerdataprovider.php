@@ -93,52 +93,57 @@ class DataManagerDataProvider extends BaseDataProvider
     protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
         if (empty($query)) {
+            $dataResult = ['data' => $data];
             $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
             $addResult = $this->dataManagerClass::add($dataForSave);
             if ($addResult->isSuccess()) {
                 $pkValue = $addResult->getId();
                 $data[$this->getPkName()] = $pkValue;
 
-                return new OperationResult(null, ['data' => $data], $pkValue);
+                return new OperationResult(null, $dataResult, $pkValue);
             }
 
             return new OperationResult(
                 implode(', ', $addResult->getErrorMessages()),
-                ['data' => $data]
+                $dataResult
             );
         }
 
+        $dataResult = ['query' => $query, 'data' => $data];
         $errorMessage = 'Данные для обновления не найдены';
         $pkName = $this->getPkName();
         if (empty($pkName)) {
             return new OperationResult(
                 $errorMessage,
-                [
-                    'data' => $data,
-                    'query' => $query
-                ]
+                $dataResult
             );
         }
 
         $bxQuery = BxQueryAdapter::init($query);
         $pkListForUpdate = $this->getPkValuesByQuery($bxQuery);
-
         if (empty($pkListForUpdate)) {
             return new OperationResult(
                 $errorMessage,
-                [
-                    'data' => $data,
-                    'query' => $query
-                ]
+                $dataResult
             );
         }
 
+        $mainResult = null;
         foreach ($pkListForUpdate as $pkValue) {
             $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
-            $this->dataManagerClass::update($pkValue, $dataForSave);
+            $bxResult = $this->dataManagerClass::update($pkValue, $dataForSave);
+            $updateResult = $bxResult->isSuccess() ?
+                new OperationResult('', $dataResult) :
+                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($updateResult);
+            } else {
+                $mainResult = $updateResult;
+            }
         }
 
-        return new OperationResult(null, ['query' => $query, 'data' => $data]);
+        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 
     /**
@@ -177,11 +182,22 @@ class DataManagerDataProvider extends BaseDataProvider
             return new OperationResult('Данные для удаления не найдены', ['query' => $query]);
         }
 
+        $mainResult = null;
+        $dataResult = ['query' => $query];
         foreach ($pkListForDelete as $pkValue) {
-            $this->dataManagerClass::delete($pkValue);
+            $bxResult = $this->dataManagerClass::delete($pkValue);
+            $updateResult = $bxResult->isSuccess() ?
+                new OperationResult('', $dataResult) :
+                new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($updateResult);
+            } else {
+                $mainResult = $updateResult;
+            }
         }
 
-        return new OperationResult(null, ['query' => $query]);
+        return $mainResult ?? new OperationResult('Данные для удаления не найдены', $dataResult);
     }
 
     /**

@@ -13,6 +13,7 @@ use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
 use CIBlockSection;
 use Data\Provider\Interfaces\CompareRuleInterface;
+use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
@@ -87,32 +88,31 @@ class SectionIblockDataProvider extends DataManagerDataProvider
      */
     protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {
+        $dataResult = ['data' => $data];
         $data['IBLOCK_ID'] = $this->iblockId;
         $oSection = new CIBlockSection;
         if (empty($query)) {
-            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
+            $dataForSave = $data instanceof ArrayObject ? iterator_to_array($data) : $data;
             $id = (int)$oSection->Add($dataForSave);
             if ($id) {
                 $data[$this->getPkName()] = $id;
-                return new OperationResult(null, ['data' => $data], $id);
+                return new OperationResult(null, $dataResult, $id);
             }
 
             return new OperationResult(
                 $oSection->LAST_ERROR,
-                ['data' => $data]
+                $dataResult
             );
         }
 
+        $dataResult = ['query' => $query, 'data' => $data];
         $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
         $errorMessage = 'Данные для обновления не найдены';
         $pkName = $this->getPkName();
         if (empty($pkName)) {
             return new OperationResult(
                 $errorMessage,
-                [
-                    'data' => $data,
-                    'query' => $query
-                ]
+                $dataResult
             );
         }
 
@@ -122,18 +122,57 @@ class SectionIblockDataProvider extends DataManagerDataProvider
         if (empty($pkListForUpdate)) {
             return new OperationResult(
                 $errorMessage,
-                [
-                    'data' => $data,
-                    'query' => $query
-                ]
+                $dataResult
             );
         }
 
+        $mainResult = null;
         foreach ($pkListForUpdate as $pkValue) {
-            $dataForSave = $data instanceof \ArrayObject ? iterator_to_array($data) : $data;
-            $oSection->Update($pkValue, $dataForSave);
+            $dataForSave = $data instanceof ArrayObject ? iterator_to_array($data) : $data;
+            $isSuccess = (bool)$oSection->Update($pkValue, $dataForSave);
+            $saveResult = $isSuccess ?
+                new OperationResult('', $dataResult) :
+                new OperationResult($oSection->LAST_ERROR, $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($saveResult);
+            } else {
+                $mainResult = $saveResult;
+            }
         }
 
-        return new OperationResult($oSection->LAST_ERROR, ['query' => $query, 'data' => $data]);
+        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
+    }
+
+    /**
+     * @param QueryCriteriaInterface $query
+     * @return OperationResultInterface
+     * @throws Exception
+     */
+    public function remove(QueryCriteriaInterface $query): OperationResultInterface
+    {
+        $dataResult = ['query' => $query];
+        $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
+        $bxQuery = BxQueryAdapter::init($query);
+        $pkListForDelete = $this->getPkValuesByQuery($bxQuery);
+        if (empty($pkListForDelete)) {
+            return new OperationResult('Данные для удаления не найдены', $dataResult);
+        }
+
+        $mainResult = null;
+        foreach ($pkListForDelete as $pkValue) {
+            $isSuccess = CIBlockSection::Delete($pkValue);
+            $deleteResult = $isSuccess ?
+                new OperationResult('', $dataResult) :
+                new OperationResult('Ошибка удаления', $dataResult);
+
+            if ($mainResult instanceof OperationResultInterface) {
+                $mainResult->addNext($deleteResult);
+            } else {
+                $mainResult = $deleteResult;
+            }
+        }
+
+        return $mainResult ?? new OperationResult('Данные для удаления не найдены', $dataResult);
     }
 }
