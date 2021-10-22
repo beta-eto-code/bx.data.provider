@@ -1,0 +1,63 @@
+#!/usr/bin/env php
+<?php
+
+define('NO_AGENT_CHECK', true);
+define('DisableEventsCheck', true);
+define('NO_KEEP_STATISTIC', true);
+define('NO_AGENT_STATISTIC', true);
+define('NOT_CHECK_PERMISSIONS', true);
+define('STOP_STATISTICS', true);
+
+use Bitrix\Main\Loader;
+use BX\Data\Provider\Commands\Export\ExportHlBlockCommand;
+use BX\Data\Provider\Commands\Export\ExportIblockCommand;
+use BX\Data\Provider\Commands\Export\ExportIblockSectionCommand;
+use BX\Data\Provider\Commands\Export\ExportTableCommand;
+use BX\Data\Provider\Commands\Export\ExportUserCommand;
+use BX\Data\Provider\Commands\Generate\GenerateHlBlockCommand;
+use BX\Data\Provider\Commands\Generate\GenerateIblockCommand;
+use BX\Data\Provider\Commands\Generate\GenerateIblockSectionCommand;
+use BX\Data\Provider\Commands\Generate\GenerateTableCommand;
+use BX\Data\Provider\Commands\Generate\GenerateUserCommand;
+use BX\Data\Provider\Commands\Import\ImportHlBlockCommand;
+use BX\Data\Provider\Commands\Import\ImportIblockCommand;
+use BX\Data\Provider\Commands\Import\ImportIblockSectionCommand;
+use BX\Data\Provider\Commands\Import\ImportTableCommand;
+use BX\Data\Provider\Commands\Import\ImportUserCommand;
+use BX\Data\Provider\Commands\RunTaskCommand;
+use Symfony\Component\Console\Application;
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/local/vendor/autoload.php')) {
+    require_once __DIR__ . '/local/vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/local/modules/bx.data.provider/vendor/autoload.php')) {
+    require_once __DIR__ . '/local/modules/bx.data.provider/vendor/autoload.php';
+}
+
+$_SERVER["DOCUMENT_ROOT"] = __DIR__;
+require $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php";
+
+Loader::includeModule('bx.data.provider');
+
+$cliApp = new Application('Data provider CLI', '0.0.1');
+$cliApp->add(new ExportIblockCommand());
+$cliApp->add(new ExportHlBlockCommand());
+$cliApp->add(new ExportIblockSectionCommand());
+$cliApp->add(new ExportTableCommand());
+$cliApp->add(new ExportUserCommand());
+
+$cliApp->add(new ImportIblockCommand());
+$cliApp->add(new ImportHlBlockCommand());
+$cliApp->add(new ImportIblockSectionCommand());
+$cliApp->add(new ImportTableCommand());
+$cliApp->add(new ImportUserCommand());
+
+$cliApp->add(new GenerateIblockCommand());
+$cliApp->add(new GenerateHlBlockCommand());
+$cliApp->add(new GenerateIblockSectionCommand());
+$cliApp->add(new GenerateTableCommand());
+$cliApp->add(new GenerateUserCommand());
+
+$cliApp->add(new RunTaskCommand());
+$cliApp->run();

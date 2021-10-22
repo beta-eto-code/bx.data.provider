@@ -34,7 +34,7 @@ class HlBlockDataProvider extends BaseDataProvider
      * @param array $hlBlockInfo
      * @throws SystemException
      */
-    private function __construct(array $hlBlockInfo)
+    protected function __construct(array $hlBlockInfo)
     {
         parent::__construct('ID');
         $this->dataManagerClass = HighloadBlockTable::compileEntity($hlBlockInfo)->getDataClass();

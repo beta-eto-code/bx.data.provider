@@ -15,12 +15,16 @@
         "ext-pdo": "*",
         "ext-simplexml": "*",
         "ext-dom": "*",
-        "beta/data.provider": "^1.0"
+        "beta/data.provider": "^1.0",
+        "symfony/console": "^5.2"
     },
     "repositories": [
         {
             "type": "vcs",
             "url": "git@github.com:beta-eto-code/data.provider.git"
         }
-    ]
+    ],
+    "require-dev": {
+        "fzaninotto/faker": "^1.9"
+    }
 }
