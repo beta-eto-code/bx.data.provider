@@ -18,6 +18,9 @@
         "beta/data.provider": "^1.0",
         "symfony/console": "^5.2"
     },
+    "autoload": {
+        "classmap": ["lib/"]
+    },
     "repositories": [
         {
             "type": "vcs",
