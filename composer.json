@@ -32,6 +32,6 @@
         "fakerphp/faker": "^1.19"
     },
     "scripts": {
-        "cs": "phpcs --standard=PSR12 ./src/"
+        "cs": "phpcs --standard=PSR12 ./lib/"
     }
 }
