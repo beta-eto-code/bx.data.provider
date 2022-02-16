@@ -64,8 +64,7 @@ class UserFieldReader implements ReaderEntityInterface
                 'filter' => [
                     '=ENTITY_ID' => $this->entityId,
                 ],
-            ]
-        );
+            ]);
 
         while ($fieldData = $queryResult->fetch()) {
             $settings = json_decode($fieldData['SETTINGS']) ?? [];

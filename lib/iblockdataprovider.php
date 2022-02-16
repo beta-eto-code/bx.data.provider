@@ -70,7 +70,7 @@ class IblockDataProvider extends DataManagerDataProvider
     private function initItem($data, int $pk = null): EntityObject
     {
         $item = $this->elementEntity->createObject();
-        if ((int)$pk > 0 ) {
+        if ((int)$pk > 0) {
             $item->setId($pk);
             $item->sysChangeState(State::CHANGED);
         }

@@ -27,7 +27,6 @@ class RunTaskCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Тип задач для выполнения, возможные значения: generate, export, import',
                 '*'
-
             )
             ->addOption(
                 'className',
@@ -37,7 +36,7 @@ class RunTaskCommand extends Command
             )
             ->addOption(
                 'new',
-                null,//'n',
+                null, //'n',
                 InputOption::VALUE_NONE,
                 'Выполнить только новые задачи'
             );
@@ -76,8 +75,7 @@ class RunTaskCommand extends Command
         MigrateResultInterface $result,
         string $type,
         bool $isVerbose = false
-    )
-    {
+    ) {
         [
             $successCount,
             $errorCount
@@ -88,14 +86,19 @@ class RunTaskCommand extends Command
 
         switch ($type) {
             case 'import':
-                $output->writeln("\n\n<fire>$className: импортировано - $successCount, ошибок импорта - $errorCount</fire>");
+                $output->writeln(
+                    "\n\n<fire>$className: импортировано - $successCount, ошибок импорта - $errorCount</fire>"
+                );
                 break;
             case 'export':
-                $output->writeln("\n\n<fire>$className: экспортировано - $successCount, ошибок экспорта - $errorCount</fire>");
+                $output->writeln(
+                    "\n\n<fire>$className: экспортировано - $successCount, ошибок экспорта - $errorCount</fire>"
+                );
                 break;
             default:
-                $output->writeln("\n\n<fire>$className: сгенерировано - $successCount, ошибок генерации - $errorCount</fire>");
-
+                $output->writeln(
+                    "\n\n<fire>$className: сгенерировано - $successCount, ошибок генерации - $errorCount</fire>"
+                );
         }
 
         if (!$isVerbose) {
@@ -108,9 +111,9 @@ class RunTaskCommand extends Command
                  * @var PkOperationResultInterface $itemResult
                  */
                 if ($itemResult->hasError()) {
-                    $output->writeln("\n<error>Error: ".$itemResult->getErrorMessage().'</error>');
+                    $output->writeln("\n<error>Error: " . $itemResult->getErrorMessage() . '</error>');
                 } else {
-                    $output->writeln("\n<info>Success: ".json_encode($itemResult->getData()).'</info>');
+                    $output->writeln("\n<info>Success: " . json_encode($itemResult->getData()) . '</info>');
                 }
             }
         }
@@ -167,7 +170,7 @@ class RunTaskCommand extends Command
         $className = $input->getOption('className');
         $isVerbose = $input->getOption('verbose');
         $isNew = $input->getOption('new');
-        $basePath = $_SERVER['DOCUMENT_ROOT']."/local/dp/tasks/";
+        $basePath = $_SERVER['DOCUMENT_ROOT'] . "/local/dp/tasks/";
 
         $runCounterData = $this->getRunCounterData();
         foreach (glob("$basePath$type/*.php") as $file) {
@@ -176,11 +179,11 @@ class RunTaskCommand extends Command
                 require_once $file;
                 $diff = array_diff(get_declared_classes(), $classes);
                 $class = reset($diff);
-                if (!is_a($class, DataProviderTaskInterface::class, true)){
+                if (!is_a($class, DataProviderTaskInterface::class, true)) {
                     continue;
                 }
 
-                $currentType = current(explode('/', str_replace($basePath, '',$file)));
+                $currentType = current(explode('/', str_replace($basePath, '', $file)));
                 $currentShortName = basename(str_replace('\\', '/', $class));
                 if ($isNew && $this->getRunCountByClassName($currentShortName, $runCounterData) > 0) {
                     continue;
@@ -189,7 +192,7 @@ class RunTaskCommand extends Command
                 if (!empty($className)) {
                     if ($currentShortName === $className) {
                         $this->incrementRunCounter($currentShortName, $runCounterData);
-                        $result = (new $class)->run();
+                        $result = (new $class())->run();
                         $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
                         break;
                     }
@@ -201,10 +204,10 @@ class RunTaskCommand extends Command
                  * @var MigrateResultInterface $result
                  */
                 $this->incrementRunCounter($currentShortName, $runCounterData);
-                $result = (new $class)->run();
+                $result = (new $class())->run();
                 $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
             } catch (\Throwable $e) {
-                $output->writeln("\n\n<error>$currentShortName: ".$e->getMessage()."</error>");
+                $output->writeln("\n\n<error>$currentShortName: " . $e->getMessage() . "</error>");
             }
         }
 

@@ -54,7 +54,6 @@ class SectionIblockDataProvider extends DataManagerDataProvider
 
         $dataManagerClass = Section::compileEntityByIblock($this->iblockId);
         parent::__construct($dataManagerClass);
-
     }
 
     public function getIterator(QueryCriteriaInterface $query): \Iterator
@@ -90,7 +89,7 @@ class SectionIblockDataProvider extends DataManagerDataProvider
     {
         $dataResult = ['data' => $data];
         $data['IBLOCK_ID'] = $this->iblockId;
-        $oSection = new CIBlockSection;
+        $oSection = new CIBlockSection();
         if (empty($query)) {
             $dataForSave = $data instanceof ArrayObject ? iterator_to_array($data) : $data;
             $id = (int)$oSection->Add($dataForSave);

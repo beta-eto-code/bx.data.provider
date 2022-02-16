@@ -24,7 +24,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class GenerateIblockSectionCommand extends Command
 {
-
     protected function configure()
     {
         $this->setName('dp:sectiongen')
@@ -100,7 +99,7 @@ PHP
         );
 
         TaskBuilder::saveFile(
-            $_SERVER['DOCUMENT_ROOT'].'/local/dp/tasks/generate/'.strtolower($className).'.php',
+            $_SERVER['DOCUMENT_ROOT'] . '/local/dp/tasks/generate/' . strtolower($className) . '.php',
             $phpFile
         );
 

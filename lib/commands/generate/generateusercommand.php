@@ -84,7 +84,7 @@ PHP
         );
 
         TaskBuilder::saveFile(
-            $_SERVER['DOCUMENT_ROOT'].'/local/dp/tasks/generate/'.strtolower($className).'.php',
+            $_SERVER['DOCUMENT_ROOT'] . '/local/dp/tasks/generate/' . strtolower($className) . '.php',
             $phpFile
         );
 

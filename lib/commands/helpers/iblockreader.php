@@ -1,6 +1,5 @@
 <?php
 
-
 namespace BX\Data\Provider\Commands\Helpers;
 
 use Bitrix\Iblock\PropertyTable;
@@ -182,7 +181,10 @@ class IblockReader implements ReaderEntityInterface
         if ($this->cachingProperties instanceof CachingIterator && $this->cachingProperties->count() > 0) {
             $list = $this->cachingProperties->getCache();
         } else {
-            $this->cachingProperties = new CachingIterator(static::getIblockProperties($this->type, $this->code), CachingIterator::FULL_CACHE);
+            $this->cachingProperties = new CachingIterator(
+                static::getIblockProperties($this->type, $this->code),
+                CachingIterator::FULL_CACHE
+            );
             $list = $this->cachingProperties;
         }
 

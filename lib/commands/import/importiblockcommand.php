@@ -47,7 +47,7 @@ class ImportIblockCommand extends Command
             throw new Exception('Invalid extension');
         }
 
-        $className = $input->getOption('className') ?? 'IblockImport'.ucfirst($type).ucfirst($code).ucfirst($ext);
+        $className = $input->getOption('className') ?? 'IblockImport' . ucfirst($type) . ucfirst($code) . ucfirst($ext);
         $className = TaskBuilder::toCamelCaseString($className);
 
         $phpFile = new PhpFile();
@@ -93,7 +93,7 @@ PHP
         );
 
         TaskBuilder::saveFile(
-            $_SERVER['DOCUMENT_ROOT'].'/local/dp/tasks/import/'.strtolower($className).'.php',
+            $_SERVER['DOCUMENT_ROOT'] . '/local/dp/tasks/import/' . strtolower($className) . '.php',
             $phpFile
         );
 

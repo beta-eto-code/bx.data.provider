@@ -77,10 +77,10 @@ class TaskBuilder
         }
 
         if (is_array($value)) {
-            $value = array_map(function($value) {
+            $value = array_map(function ($value) {
                 return static::prepareValue($value);
             }, $value);
-            return '['.implode(', ', $value).']';
+            return '[' . implode(', ', $value) . ']';
         }
 
         return $value;
@@ -104,7 +104,7 @@ class TaskBuilder
                 continue;
             }
 
-            $result .= "\n\t\t\t'".$field->name."' => ".$strValue.',';
+            $result .= "\n\t\t\t'" . $field->name . "' => " . $strValue . ',';
         }
 
         return "[{$result}\n\t\t]";

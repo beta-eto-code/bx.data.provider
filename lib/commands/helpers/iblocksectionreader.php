@@ -181,7 +181,7 @@ class IblockSectionReader implements ReaderEntityInterface
         }
 
         if (empty($this->ufReader)) {
-            $this->ufReader = new UserFieldReader("IBLOCK_".$this->getIblockId()."_SECTION");
+            $this->ufReader = new UserFieldReader("IBLOCK_" . $this->getIblockId() . "_SECTION");
         }
 
         foreach ($this->ufReader as $field) {

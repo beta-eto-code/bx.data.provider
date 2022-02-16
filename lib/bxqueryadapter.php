@@ -72,8 +72,7 @@ class BxQueryAdapter
         CompareRuleInterface $mainRule,
         CompareRuleInterface $slaveRule,
         bool $isOrLogic = false
-    )
-    {
+    ) {
         if ($isOrLogic) {
             $mainRule->orCompareRule($slaveRule);
         } else {

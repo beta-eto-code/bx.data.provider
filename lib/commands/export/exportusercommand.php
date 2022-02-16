@@ -43,7 +43,7 @@ class ExportUserCommand extends Command
             throw new Exception('Invalid extension');
         }
 
-        $className = $input->getOption('className') ?? 'UserExport'.ucfirst($ext);
+        $className = $input->getOption('className') ?? 'UserExport' . ucfirst($ext);
         $className = TaskBuilder::toCamelCaseString($className);
 
         $phpFile = new PhpFile();
@@ -90,7 +90,7 @@ PHP
         );
 
         TaskBuilder::saveFile(
-            $_SERVER['DOCUMENT_ROOT'].'/local/dp/tasks/export/'.strtolower($className).'.php',
+            $_SERVER['DOCUMENT_ROOT'] . '/local/dp/tasks/export/' . strtolower($className) . '.php',
             $phpFile
         );
 

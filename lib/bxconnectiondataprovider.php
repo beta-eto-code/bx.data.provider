@@ -37,8 +37,7 @@ class BxConnectionDataProvider extends BaseDataProvider implements SqlRelationPr
         string $tableName,
         string $connectionName = null,
         string $pkName = null
-    )
-    {
+    ) {
         parent::__construct($pkName);
         $this->tableName = $tableName;
         $this->sqlBuilder = $sqlBuilder;
@@ -56,7 +55,7 @@ class BxConnectionDataProvider extends BaseDataProvider implements SqlRelationPr
         $sqlQuery = $this->sqlBuilder->buildSelectQuery($query, $this->tableName, false);
         $queryResult = $this->connection->query((string)$sqlQuery);
 
-        while($item = $queryResult->fetch()) {
+        while ($item = $queryResult->fetch()) {
             yield $item;
         }
 
@@ -100,12 +99,12 @@ class BxConnectionDataProvider extends BaseDataProvider implements SqlRelationPr
         $this->connection->queryExecute((string)$sqlQuery);
 
         return  new OperationResult(
-                null,
-                [
+            null,
+            [
                     'data' => $data,
                     'query' => $query,
                 ]
-            );
+        );
     }
 
     /**

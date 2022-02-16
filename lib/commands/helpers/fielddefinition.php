@@ -29,11 +29,10 @@ class FieldDefinition
     public function __construct(
         string $name,
         string $type,
-               $defaultValue = null,
-        bool   $isRequired = false,
-        bool   $isUnique = false
-    )
-    {
+        $defaultValue = null,
+        bool $isRequired = false,
+        bool $isUnique = false
+    ) {
         $this->name = $name;
         $this->type = $type;
         $this->defaultValue = $defaultValue;
