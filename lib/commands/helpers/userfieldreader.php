@@ -18,7 +18,7 @@ class UserFieldReader implements ReaderEntityInterface
      */
     private $entityId;
     /**
-     * @var Iterator
+     * @var Iterator|null
      */
     private $cachedFields;
 
@@ -89,7 +89,6 @@ class UserFieldReader implements ReaderEntityInterface
     }
 
     /**
-     * @return FieldDefinition[]|Iterator
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException

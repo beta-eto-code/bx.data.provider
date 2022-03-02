@@ -26,6 +26,13 @@ class FieldDefinition
      */
     public $name = '';
 
+    /**
+     * @param string $name
+     * @param string $type
+     * @param mixed $defaultValue
+     * @param bool $isRequired
+     * @param bool $isUnique
+     */
     public function __construct(
         string $name,
         string $type,
@@ -48,6 +55,6 @@ class FieldDefinition
      */
     public static function initEnum(string $name, array $values, bool $isRequired = false): FieldDefinition
     {
-        return new static($name, TypeList::ENUM, $values, $isRequired);
+        return new FieldDefinition($name, TypeList::ENUM, $values, $isRequired);
     }
 }

@@ -24,6 +24,9 @@ class IblockReader implements ReaderEntityInterface
      * @var string
      */
     private $code;
+    /**
+     * @var CachingIterator|null
+     */
     private $cachingProperties;
 
     public function __construct(string $type, string $code)
@@ -35,7 +38,7 @@ class IblockReader implements ReaderEntityInterface
     /**
      * @param string $type
      * @param string $code
-     * @return FieldDefinition[]|Iterator
+     *
      * @throws ArgumentException
      * @throws LoaderException
      * @throws ObjectPropertyException
@@ -82,9 +85,6 @@ class IblockReader implements ReaderEntityInterface
         return new EmptyIterator();
     }
 
-    /**
-     * @return FieldDefinition[]|Iterator
-     */
     public static function getIblockFields(): Iterator
     {
         yield new FieldDefinition(
@@ -166,7 +166,6 @@ class IblockReader implements ReaderEntityInterface
     }
 
     /**
-     * @return FieldDefinition[]|EmptyIterator|Iterator
      * @throws ArgumentException
      * @throws LoaderException
      * @throws ObjectPropertyException

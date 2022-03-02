@@ -22,6 +22,9 @@ use Exception;
 
 class SectionIblockDataProvider extends DataManagerDataProvider
 {
+    /**
+     * @var int
+     */
     private $iblockId;
 
     /**
@@ -58,7 +61,6 @@ class SectionIblockDataProvider extends DataManagerDataProvider
 
     public function getIterator(QueryCriteriaInterface $query): \Iterator
     {
-        $query = $query ?? new QueryCriteria();
         $query->addCriteria('IBLOCK_ID', CompareRuleInterface::EQUAL, $this->iblockId);
 
         return parent::getIterator($query);
@@ -94,7 +96,7 @@ class SectionIblockDataProvider extends DataManagerDataProvider
             $dataForSave = $data instanceof ArrayObject ? iterator_to_array($data) : $data;
             $id = (int)$oSection->Add($dataForSave);
             if ($id) {
-                $data[$this->getPkName()] = $id;
+                $data[$this->getPkName() ?? 'ID'] = $id;
                 return new OperationResult(null, $dataResult, $id);
             }
 
@@ -140,7 +142,9 @@ class SectionIblockDataProvider extends DataManagerDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
+        return $mainResult instanceof PkOperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 
     /**
@@ -172,6 +176,8 @@ class SectionIblockDataProvider extends DataManagerDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для удаления не найдены', $dataResult);
+        return $mainResult instanceof OperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для удаления не найдены', $dataResult);
     }
 }

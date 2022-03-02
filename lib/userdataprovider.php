@@ -17,7 +17,7 @@ class UserDataProvider extends DataManagerDataProvider
 {
     public function __construct()
     {
-        parent::__construct(UserTable::class, 'ID');
+        parent::__construct(UserTable::class);
     }
 
     /**
@@ -39,7 +39,7 @@ class UserDataProvider extends DataManagerDataProvider
                 return new OperationResult($oUser->LAST_ERROR, $dataResult);
             }
 
-            $data[$this->getPkName()] = $id;
+            $data[$this->getPkName() ?? 'ID'] = $id;
 
             return new OperationResult(null, $dataResult, $id);
         }
@@ -71,7 +71,9 @@ class UserDataProvider extends DataManagerDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
+        return $mainResult instanceof PkOperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 
     /**
@@ -104,6 +106,8 @@ class UserDataProvider extends DataManagerDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для удаления не найдены', $dataResult);
+        return $mainResult instanceof OperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для удаления не найдены', $dataResult);
     }
 }

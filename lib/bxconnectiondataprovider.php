@@ -72,17 +72,18 @@ class BxConnectionDataProvider extends BaseDataProvider implements SqlRelationPr
         $query = $query ?? new QueryCriteria();
         $whereBlock = $this->sqlBuilder->buildWhereBlock($query, false);
         $sql = "SELECT COUNT(*) as cnt FROM {$this->tableName} {$whereBlock}";
-        $queryResult = $this->connection->query((string)$sql);
+        $queryResult = $this->connection->query($sql);
         $data = $queryResult->fetch();
 
         return (int)$data['cnt'];
     }
 
     /**
-     * @param array|ArrayObject $data
+     * @param array $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
      * @throws SqlQueryException
+     * @psalm-suppress MoreSpecificImplementedParamType
      */
     protected function saveInternal(&$data, QueryCriteriaInterface $query = null): PkOperationResultInterface
     {

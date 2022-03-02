@@ -29,9 +29,12 @@
     ],
     "require-dev": {
         "squizlabs/php_codesniffer": "^3.6",
-        "fakerphp/faker": "^1.19"
+        "fakerphp/faker": "^1.19",
+        "vimeo/psalm": "^4.22",
+        "nette/php-generator": "^3.6"
     },
     "scripts": {
-        "cs": "phpcs --standard=PSR12 ./lib/"
+        "cs": "phpcs --standard=PSR12 ./lib/",
+        "analyze": "psalm --show-info=true"
     }
 }

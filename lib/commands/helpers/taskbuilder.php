@@ -28,7 +28,8 @@ class TaskBuilder
 
     /**
      * @param string $file
-     * @param $data
+     * @param mixed $data
+     * @return void
      * @throws SystemException
      */
     public static function saveFile(string $file, $data)
@@ -46,7 +47,7 @@ class TaskBuilder
     }
 
     /**
-     * @param $value
+     * @param mixed $value
      * @return mixed|string
      */
     private static function prepareValue($value)
@@ -69,7 +70,7 @@ class TaskBuilder
 
         if (is_object($value)) {
             if (method_exists($value, '_toString')) {
-                $value = (string)$value;
+                $value = $value->_toString();
                 return "'$value'";
             }
 

@@ -27,7 +27,7 @@ class DataManagerDataProvider extends BaseDataProvider
     private $dataManagerClass;
 
     /**
-     * @param string|DataManager $className
+     * @param mixed $className
      * @param string $pkName
      */
     public function __construct($className, string $pkName = 'ID')
@@ -98,7 +98,7 @@ class DataManagerDataProvider extends BaseDataProvider
             $addResult = $this->dataManagerClass::add($dataForSave);
             if ($addResult->isSuccess()) {
                 $pkValue = $addResult->getId();
-                $data[$this->getPkName()] = $pkValue;
+                $data[$this->getPkName() ?? 'ID'] = $pkValue;
 
                 return new OperationResult(null, $dataResult, $pkValue);
             }
@@ -143,15 +143,26 @@ class DataManagerDataProvider extends BaseDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
+        return $mainResult instanceof PkOperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 
     /**
      * @return string
+     * @psalm-suppress RedundantConditionGivenDocblockType,DocblockTypeContradiction
      */
     public function getSourceName(): string
     {
-        return $this->dataManagerClass;
+        if (is_string($this->dataManagerClass)) {
+            return $this->dataManagerClass;
+        }
+
+        if (is_object($this->dataManagerClass)) {
+            return get_class($this->dataManagerClass);
+        }
+
+        return '';
     }
 
     /**
@@ -197,7 +208,9 @@ class DataManagerDataProvider extends BaseDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для удаления не найдены', $dataResult);
+        return $mainResult instanceof OperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для удаления не найдены', $dataResult);
     }
 
     /**

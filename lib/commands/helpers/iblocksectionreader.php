@@ -23,7 +23,7 @@ class IblockSectionReader implements ReaderEntityInterface
      */
     private $code;
     /**
-     * @var UserFieldReader
+     * @var UserFieldReader|null
      */
     private $ufReader;
     /**
@@ -169,7 +169,6 @@ class IblockSectionReader implements ReaderEntityInterface
     }
 
     /**
-     * @return FieldDefinition[]|Iterator
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException

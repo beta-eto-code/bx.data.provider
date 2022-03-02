@@ -19,6 +19,11 @@ class BxQueryAdapter
         $this->query = $query;
     }
 
+    /**
+     * @param string $name
+     * @param mixed $value
+     * @return array
+     */
     private static function getOperation(string $name, $value): array
     {
         switch (true) {
@@ -54,7 +59,7 @@ class BxQueryAdapter
 
     /**
      * @param string $name
-     * @param $value
+     * @param mixed $value
      * @return CompareRuleInterface
      */
     private static function createCompareRule(string $name, $value): CompareRuleInterface
@@ -67,6 +72,7 @@ class BxQueryAdapter
      * @param CompareRuleInterface $mainRule
      * @param CompareRuleInterface $slaveRule
      * @param bool $isOrLogic
+     * @return void
      */
     private static function mergeRules(
         CompareRuleInterface $mainRule,
@@ -82,9 +88,9 @@ class BxQueryAdapter
 
     /**
      * @param array $filterData
-     * @return CompareRuleInterface
+     * @return CompareRuleInterface|null
      */
-    private static function buildCriteria(array $filterData): CompareRuleInterface
+    private static function buildCriteria(array $filterData): ?CompareRuleInterface
     {
         $logic = strtoupper($filterData['LOGIC'] ?? '');
         unset($filterData['LOGIC']);
@@ -99,6 +105,10 @@ class BxQueryAdapter
 
             if (is_int($name) && is_array($value) && !empty($value)) {
                 $compareRule = static::buildCriteria($value);
+                if (is_null($compareRule)) {
+                    continue;
+                }
+
                 if (is_null($mainCriteria)) {
                     $mainCriteria = $compareRule;
                 } else {
@@ -120,10 +130,16 @@ class BxQueryAdapter
     /**
      * @param QueryCriteriaInterface $query
      * @param array $filterData
+     * @return void
      */
     private static function addCriteria(QueryCriteriaInterface $query, array $filterData)
     {
-        $query->addCompareRule(static::buildCriteria($filterData));
+        $compareRule = static::buildCriteria($filterData);
+        if (is_null($compareRule)) {
+            return;
+        }
+
+        $query->addCompareRule($compareRule);
     }
 
     public static function initFromArray(array $params): BxQueryAdapter
@@ -164,7 +180,7 @@ class BxQueryAdapter
             }
         }
 
-        return new static($query);
+        return new BxQueryAdapter($query);
     }
 
     /**
@@ -173,7 +189,7 @@ class BxQueryAdapter
      */
     public static function init(QueryCriteriaInterface $query): BxQueryAdapter
     {
-        return new static($query);
+        return new BxQueryAdapter($query);
     }
 
     public function getQuery(): QueryCriteriaInterface
@@ -359,8 +375,8 @@ class BxQueryAdapter
         $select = $this->query->getSelect();
         $filter = $this->buildFilter();
         $order = $this->buildOrder();
-        $limit = (int)$this->query->getLimit();
-        $offset = (int)$this->query->getOffset();
+        $limit = $this->query->getLimit();
+        $offset = $this->query->getOffset();
         $group = $this->query->getGroup();
 
         $result = [];

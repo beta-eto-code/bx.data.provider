@@ -17,6 +17,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class RunTaskCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:run')
@@ -67,6 +70,7 @@ class RunTaskCommand extends Command
      * @param MigrateResultInterface $result
      * @param string $type
      * @param bool $isVerbose
+     * @return void
      * @throws Exception
      */
     private function printResult(
@@ -121,6 +125,7 @@ class RunTaskCommand extends Command
 
     /**
      * @param string $className
+     * @return void
      * @param array $dataResult
      */
     private function incrementRunCounter(string $className, array &$dataResult)
@@ -130,6 +135,7 @@ class RunTaskCommand extends Command
 
     /**
      * @param array $dataResult
+     * @return void
      * @throws ArgumentOutOfRangeException
      */
     private function saveRunCounterData(array $dataResult)
@@ -163,6 +169,7 @@ class RunTaskCommand extends Command
      * @param OutputInterface $output
      * @return int
      * @throws Exception
+     * @psalm-suppress UnresolvableInclude
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -207,6 +214,7 @@ class RunTaskCommand extends Command
                 $result = (new $class())->run();
                 $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
             } catch (\Throwable $e) {
+                $currentShortName = $currentShortName ?? 'Unknown';
                 $output->writeln("\n\n<error>$currentShortName: " . $e->getMessage() . "</error>");
             }
         }

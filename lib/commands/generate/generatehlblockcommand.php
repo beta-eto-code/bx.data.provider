@@ -27,6 +27,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class GenerateHlBlockCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:hlgen')

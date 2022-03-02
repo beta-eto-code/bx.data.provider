@@ -12,6 +12,7 @@ use Data\Provider\Providers\JsonDataProvider;
 use Data\Provider\Providers\XmlDataProvider;
 use Data\Provider\QueryCriteria;
 use Data\Provider\SqlBuilderMySql;
+use Exception;
 use Nette\PhpGenerator\PhpFile;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,6 +22,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ExportTableCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:tableexport')
@@ -35,12 +39,18 @@ class ExportTableCommand extends Command
             );
     }
 
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @throws Exception
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $name = $input->getArgument('name');
         $filePath = $input->getArgument('file');
         $pathData = pathinfo($filePath);
-        $ext = strtolower($pathData['extension']);
+        $ext = strtolower($pathData['extension'] ?? '');
         if (!in_array($ext, ['json', 'xml', 'csv'])) {
             throw new Exception('Invalid extension');
         }

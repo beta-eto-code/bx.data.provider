@@ -16,6 +16,7 @@ use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\Providers\BaseDataProvider;
+use Data\Provider\QueryCriteria;
 use Exception;
 use Iterator;
 
@@ -66,7 +67,7 @@ class HlBlockDataProvider extends BaseDataProvider
             throw new Exception('hlblock is not found');
         }
 
-        return new static($hlBlockInfo);
+        return new HlBlockDataProvider($hlBlockInfo);
     }
 
     /**
@@ -91,7 +92,7 @@ class HlBlockDataProvider extends BaseDataProvider
             throw new Exception('hlblock is not found');
         }
 
-        return new static($hlBlockInfo);
+        return new HlBlockDataProvider($hlBlockInfo);
     }
 
     /**
@@ -117,7 +118,7 @@ class HlBlockDataProvider extends BaseDataProvider
             throw new Exception('hlblock is not found');
         }
 
-        return new static($hlBlockInfo);
+        return new HlBlockDataProvider($hlBlockInfo);
     }
 
     /**
@@ -126,7 +127,7 @@ class HlBlockDataProvider extends BaseDataProvider
      */
     protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
-        return $this->dataManagerProvider->getIterator($query);
+        return $this->dataManagerProvider->getIterator($query ?? new QueryCriteria());
     }
 
     /**
@@ -141,10 +142,19 @@ class HlBlockDataProvider extends BaseDataProvider
 
     /**
      * @return string
+     * @psalm-suppress RedundantConditionGivenDocblockType
      */
     public function getSourceName(): string
     {
-        return $this->dataManagerClass;
+        if (is_string($this->dataManagerClass)) {
+            return $this->dataManagerClass;
+        }
+
+        if (is_object($this->dataManagerClass)) {
+            return get_class($this->dataManagerClass);
+        }
+
+        return '';
     }
 
     /**

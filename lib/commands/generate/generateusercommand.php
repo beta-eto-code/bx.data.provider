@@ -22,6 +22,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class GenerateUserCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:usergen')
@@ -41,6 +44,11 @@ class GenerateUserCommand extends Command
             );
     }
 
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $className = $input->getOption('className') ?? 'UserGen';

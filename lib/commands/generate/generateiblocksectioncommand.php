@@ -24,6 +24,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class GenerateIblockSectionCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:sectiongen')

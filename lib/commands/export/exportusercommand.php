@@ -21,6 +21,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ExportUserCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:userexport')
@@ -34,11 +37,17 @@ class ExportUserCommand extends Command
             );
     }
 
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @throws Exception
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $filePath = $input->getArgument('file');
         $pathData = pathinfo($filePath);
-        $ext = strtolower($pathData['extension']);
+        $ext = strtolower($pathData['extension'] ?? '');
         if (!in_array($ext, ['json', 'xml', 'csv'])) {
             throw new Exception('Invalid extension');
         }

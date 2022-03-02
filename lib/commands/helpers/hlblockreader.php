@@ -38,7 +38,7 @@ class HlBlockReader extends TableReader
             throw new Exception('Hl block is not found');
         }
 
-        return new static($hlBlockData['TABLE_NAME']);
+        return new HlBlockReader($hlBlockData['TABLE_NAME']);
     }
 
     /**
@@ -62,6 +62,6 @@ class HlBlockReader extends TableReader
             throw new Exception('Hl block is not found');
         }
 
-        return new static((int)$hlBlockData['ID']);
+        return new HlBlockReader($hlBlockData['TABLE_NAME']);
     }
 }

@@ -27,6 +27,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class GenerateIblockCommand extends Command
 {
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('dp:iblockgen')

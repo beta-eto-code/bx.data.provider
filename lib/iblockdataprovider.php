@@ -22,15 +22,7 @@ use Exception;
 class IblockDataProvider extends DataManagerDataProvider
 {
     /**
-     * @var DataManagerDataProvider
-     */
-    private $dataManagerProvider;
-    /**
-     * @var DataManager|string
-     */
-    private $dataManagerClass;
-    /**
-     * @var ElementEntity|false
+     * @var ElementEntity
      */
     private $elementEntity;
 
@@ -61,7 +53,7 @@ class IblockDataProvider extends DataManagerDataProvider
     }
 
     /**
-     * @param $data
+     * @param mixed $data
      * @param int|null $pk
      * @return EntityObject
      * @throws ArgumentException
@@ -82,7 +74,7 @@ class IblockDataProvider extends DataManagerDataProvider
             }
 
             if ($key !== 'ID' && !is_null($value)) {
-                $item->set($key, $value ?? '');
+                $item->set($key, $value);
             }
         }
 
@@ -105,7 +97,7 @@ class IblockDataProvider extends DataManagerDataProvider
             $addResult = $item->save();
             if ($addResult->isSuccess()) {
                 $pkValue = $addResult->getId();
-                $data[$this->getPkName()] = $pkValue;
+                $data[$this->getPkName() ?? 'ID'] = $pkValue;
 
                 return new OperationResult(null, $dataResult, $pkValue);
             }
@@ -151,6 +143,8 @@ class IblockDataProvider extends DataManagerDataProvider
             }
         }
 
-        return $mainResult ?? new OperationResult('Данные для сохранения не найдены', $dataResult);
+        return $mainResult instanceof PkOperationResultInterface ?
+            $mainResult :
+            new OperationResult('Данные для сохранения не найдены', $dataResult);
     }
 }

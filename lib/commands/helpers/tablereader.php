@@ -15,7 +15,7 @@ class TableReader implements ReaderEntityInterface
      */
     private $tableName;
     /**
-     * @var CachingIterator
+     * @var CachingIterator|null
      */
     private $cachedFields;
 
@@ -78,8 +78,8 @@ class TableReader implements ReaderEntityInterface
     }
 
     /**
-     * @return FieldDefinition[]|EmptyIterator|Iterator
      * @throws SqlQueryException
+     * @return Iterator
      */
     public function getIterator(): Iterator
     {

@@ -70,7 +70,6 @@ class UserEntityReader extends UserFieldReader
     }
 
     /**
-     * @return FieldDefinition[]|Iterator
      * @throws SystemException
      */
     public function getIterator(): Iterator
