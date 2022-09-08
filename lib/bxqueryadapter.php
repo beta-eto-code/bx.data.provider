@@ -150,8 +150,9 @@ class BxQueryAdapter
         $offset = (int)($params['offset'] ?? 0);
         $groupData = $params['group'] ?? null;
         $orderData = $params['order'] ?? null;
+        $runtimeList = $params['runtime'] ?? [];
 
-        $query = new QueryCriteria();
+        $query = new ExtQueryCriteria();
         if (!empty($selectData) && is_array($selectData)) {
             $query->setSelect($selectData);
         }
@@ -178,6 +179,10 @@ class BxQueryAdapter
                     $query->setOrderBy($name, strtoupper($direction) !== 'DESC');
                 }
             }
+        }
+
+        if (!empty($runtimeList)) {
+            $query->setRuntime($runtimeList);
         }
 
         return new BxQueryAdapter($query);
@@ -402,6 +407,13 @@ class BxQueryAdapter
 
         if (!empty($group)) {
             $result['group'] = $group;
+        }
+
+        if ($this->query instanceof ExtQueryCriteria) {
+            $runtime = $this->query->getRuntime();
+            if (!empty($runtime)) {
+                $result['runtime'] = $runtime;
+            }
         }
 
         return $result;
