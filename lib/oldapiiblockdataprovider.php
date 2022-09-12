@@ -100,11 +100,12 @@ class OldApiIblockDataProvider extends BaseDataProvider
     /**
      * @param array|ArrayObject $data
      * @return array
+     * @throws SystemException
      */
     private function prepareDataForSave($data): array
     {
         $searchKey = '_VALUE';
-        $result = [];
+        $result = ['IBLOCK_ID' => $this->getIblockId()];
         foreach ($data as $key => $value) {
             if (strpos($key, $searchKey) === false) {
                 $result[$key] = $value;
@@ -139,8 +140,8 @@ class OldApiIblockDataProvider extends BaseDataProvider
             /**
              * @psalm-suppress UndefinedClass
              */
-            $id = (int) $iblockElementInst->Add($dataForSave, $this->useWorkflow);
-            if ($id) {
+            $id = (int) $iblockElementInst->Add($dataForSave, $this->useWorkflow, $this->useWorkflow);
+            if ($id === 0) {
                 /**
                  * @psalm-suppress UndefinedClass
                  */
