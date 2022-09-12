@@ -19,7 +19,7 @@ use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
 use Exception;
 
-class IblockDataProvider extends DataManagerDataProvider
+class OldApiIblockDataProvider extends DataManagerDataProvider
 {
     /**
      * @var ElementEntity
