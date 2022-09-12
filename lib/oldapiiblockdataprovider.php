@@ -67,7 +67,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
      * @return int
      * @throws SystemException
      */
-    private function getIblockId(): int
+    public function getIblockId(): int
     {
         if (!($this->iblock instanceof EntityObject)) {
             return 0;
@@ -152,6 +152,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
              * @psalm-suppress PossiblyNullArrayOffset
              */
             $data[$pkName] = $id;
+            $data['IBLOCK_ID'] = $this->getIblockId();
             return new OperationResult(null, $dataResult, $id);
         }
 
@@ -186,6 +187,8 @@ class OldApiIblockDataProvider extends BaseDataProvider
                 $mainResult = $updateResult;
             }
         }
+
+        $data['IBLOCK_ID'] = $this->getIblockId();
 
         return $mainResult instanceof PkOperationResultInterface ?
             $mainResult :

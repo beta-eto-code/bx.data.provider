@@ -116,6 +116,19 @@ class IblockDataProvider extends DataManagerDataProvider
     }
 
     /**
+     * @return int
+     * @throws SystemException
+     */
+    public function getIblockId(): int
+    {
+        if (!($this->iblock instanceof EntityObject)) {
+            return 0;
+        }
+
+        return (int)$this->iblock->getId();
+    }
+
+    /**
      * @param array|ArrayObject $data
      * @param QueryCriteriaInterface|null $query
      * @return PkOperationResultInterface
@@ -133,6 +146,7 @@ class IblockDataProvider extends DataManagerDataProvider
                 $this->updateMultiValueProps($item, $data);
                 $pkValue = $addResult->getId();
                 $data[$this->getPkName() ?? 'ID'] = $pkValue;
+                $data['IBLOCK_ID'] = $this->getIblockId();
 
                 return new OperationResult(null, $dataResult, $pkValue);
             }
@@ -177,6 +191,8 @@ class IblockDataProvider extends DataManagerDataProvider
                 $mainResult = $saveResult;
             }
         }
+
+        $data['IBLOCK_ID'] = $this->getIblockId();
 
         return $mainResult instanceof PkOperationResultInterface ?
             $mainResult :
