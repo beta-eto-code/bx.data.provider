@@ -44,23 +44,31 @@ class OldApiIblockDataProvider extends BaseDataProvider
     private $sqlBuilder;
 
     /**
+     * @param EntityObject|null $iblock
+     * @param bool $useWorkflow
+     */
+    private function __construct(?EntityObject $iblock = null, bool $useWorkflow = false)
+    {
+        parent::__construct('ID');
+        $this->iblock = $iblock;
+        $this->useWorkflow = $useWorkflow;
+        $this->defaultFilter = ['IBLOCK_ID' => $this->getIblockId()];
+    }
+
+    /**
      * @param string $iblockType
      * @param string $iblockCode
      * @param bool $useWorkflow
-     * @throws ArgumentException
-     * @throws LoaderException
-     * @throws ObjectPropertyException
-     * @throws SystemException
+     * @return OldApiIblockDataProvider
      * @throws Exception
      */
-    public function __construct(
+    public static function initByIblock(
         string $iblockType,
         string $iblockCode,
         bool $useWorkflow = false
-    ) {
-        parent::__construct('ID');
+    ): OldApiIblockDataProvider {
         Loader::includeModule('iblock');
-        $this->iblock = IblockTable::getList([
+        $iblock = IblockTable::getList([
             'filter' => [
                 '=IBLOCK_TYPE_ID' => $iblockType,
                 '=CODE' => $iblockCode,
@@ -68,12 +76,26 @@ class OldApiIblockDataProvider extends BaseDataProvider
             'limit' => 1,
         ])->fetchObject();
 
-        if (empty($this->iblock)) {
+        if (empty($iblock)) {
             throw new Exception('iblock is not found');
         }
 
-        $this->defaultFilter = ['IBLOCK_ID' => $this->getIblockId()];
-        $this->useWorkflow = $useWorkflow;
+        return new OldApiIblockDataProvider($iblock, $useWorkflow);
+    }
+
+    /**
+     * @param array $defaultFilter
+     * @param bool $useWorkflow
+     * @return OldApiIblockDataProvider
+     */
+    public static function initByDefaultFilter(
+        array $defaultFilter,
+        bool $useWorkflow = false
+    ): OldApiIblockDataProvider {
+        $result = new OldApiIblockDataProvider(null, $useWorkflow);
+        $result->setDefaultFilter($defaultFilter);
+
+        return $result;
     }
 
     /**
