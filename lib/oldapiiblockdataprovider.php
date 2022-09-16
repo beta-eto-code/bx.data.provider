@@ -396,24 +396,31 @@ class OldApiIblockDataProvider extends BaseDataProvider
     /**
      * @param QueryCriteriaInterface|null $query
      * @return int
-     * @throws SystemException
      */
     public function getDataCount(QueryCriteriaInterface $query = null): int
     {
         $pkName = $this->getPkName();
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
-        $params['filter']['IBLOCK_ID'] = $this->getIblockId();
+        $defaultFilter = $this->defaultFilter;
+        if (!empty($defaultFilter)) {
+            $params['filter'] = array_merge($params['filter'] ?? [], $defaultFilter);
+        }
 
-        /**
-         * @psalm-suppress UndefinedClass
-         */
-        return (int) CIBlockElement::GetList(
-            [],
-            $params['filter'],
-            false,
-            false,
-            [$pkName]
-        )->SelectedRowsCount();
+        $filter = $params['filter'] ?? [];
+        $order = $params['order'] ?? [];
+        $el = new CIBlockElement();
+        $el->prepareSql([$pkName], $filter, false, $order);
+        $sql = "SELECT COUNT('*') as count FROM $el->sFrom WHERE 1=1 $el->sWhere";
+        $sql = str_replace(
+            "AND (((BE.WF_STATUS_ID=1 AND BE.WF_PARENT_ELEMENT_ID IS NULL)))",
+            "",
+            $sql
+        );
+
+        global $DB;
+        $res = $DB->Query($sql);
+        $res = $res->Fetch();
+        return (int)$res["count"];
     }
 
     /**
