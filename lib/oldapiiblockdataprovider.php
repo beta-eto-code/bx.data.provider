@@ -39,7 +39,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
      */
     private $defaultFilter = [];
     /**
-     * @var null|callable(CIBlockElement $el): string
+     * @var null|callable(CIBlockElement $el, int $limit, int $offset): string
      */
     private $sqlBuilder;
 
@@ -121,7 +121,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
     }
 
     /**
-     * @param callable(CIBlockElement $el): string $fnBuild
+     * @param callable(CIBlockElement $el, int $limit, int $offset): string $fnBuild
      * @return void
      */
     public function setSqlBuilder(callable $fnBuild)
@@ -182,7 +182,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
         }
 
         $el = new CIBlockElement();
-        $sql = ($this->sqlBuilder)($el);
+        $sql = ($this->sqlBuilder)($el, (int)$params['limit'], (int)$params['offset']);
         if (empty($sql)) {
             return null;
         }
