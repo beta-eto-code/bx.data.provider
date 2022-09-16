@@ -17,6 +17,8 @@
         <UndefinedDocblockClass>
             <errorLevel type="suppress">
                 <referencedClass name="Bitrix\*" />
+                <referencedClass name="CIBlockElement" />
+                <referencedClass name="CIBlockResult" />
             </errorLevel>
         </UndefinedDocblockClass>
         <UndefinedClass>
@@ -24,6 +26,8 @@
                 <referencedClass name="Faker\Factory" />
                 <referencedClass name="Bitrix\*" />
                 <referencedClass name="CIBlockSection" />
+                <referencedClass name="CIBlockElement" />
+                <referencedClass name="CIBlockResult" />
                 <referencedClass name="CUser" />
             </errorLevel>
         </UndefinedClass>

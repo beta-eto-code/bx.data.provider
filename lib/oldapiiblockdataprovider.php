@@ -13,6 +13,7 @@ use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Objectify\EntityObject;
 use Bitrix\Main\SystemException;
 use CIBlockElement;
+use CIBlockResult;
 use Data\Provider\Interfaces\CompareRuleInterface;
 use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
@@ -29,7 +30,18 @@ class OldApiIblockDataProvider extends BaseDataProvider
      * @var EntityObject|null
      */
     private $iblock;
-    private bool $useWorkflow;
+    /**
+     * @var bool
+     */
+    private $useWorkflow = false;
+    /**
+     * @var array
+     */
+    private $defaultFilter = [];
+    /**
+     * @var null|callable(CIBlockElement $el): string
+     */
+    private $sqlBuilder;
 
     /**
      * @param string $iblockType
@@ -60,6 +72,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
             throw new Exception('iblock is not found');
         }
 
+        $this->defaultFilter = ['IBLOCK_ID' => $this->getIblockId()];
         $this->useWorkflow = $useWorkflow;
     }
 
@@ -77,6 +90,24 @@ class OldApiIblockDataProvider extends BaseDataProvider
     }
 
     /**
+     * @param array $filter
+     * @return void
+     */
+    public function setDefaultFilter(array $filter)
+    {
+        $this->defaultFilter = $filter;
+    }
+
+    /**
+     * @param callable(CIBlockElement $el): string $fnBuild
+     * @return void
+     */
+    public function setSqlBuilder(callable $fnBuild)
+    {
+        $this->sqlBuilder = $fnBuild;
+    }
+
+    /**
      * @param QueryCriteriaInterface|null $query
      * @return Iterator
      * @throws SystemException
@@ -84,17 +115,138 @@ class OldApiIblockDataProvider extends BaseDataProvider
     protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
-        $params['filter']['IBLOCK_ID'] = $this->getIblockId();
-        $select = $params['select'] ?? ['*', 'PROPERTY_*'];
+        $params['select'] = $params['select'] ?? ['*', 'PROPERTY_*'];
+        $defaultFilter = $this->defaultFilter;
+        if (!empty($defaultFilter)) {
+            $params['filter'] = array_merge($params['filter'] ?? [], $defaultFilter);
+        }
+
         /**
          * @psalm-suppress UndefinedClass
          */
-        $resSelect = CIBlockElement::GetList([], $params['filter'], false, false, $select);
+        $resSelect = $this->internalGetList($params);
+        if (empty($resSelect)) {
+            return new EmptyIterator();
+        }
+
         while ($item = $resSelect->Fetch()) {
             yield $item;
         }
 
         return new EmptyIterator();
+    }
+
+    /**
+     * @param array $params
+     * @return CIBlockResult|null
+     */
+    private function internalGetList(array $params): ?CIBlockResult
+    {
+        $params = $this->prepareParams($params);
+        $filter = $params['filter'] ?? [];
+        $select = $params['select'] ?? [];
+        $order = $params['order'] ?? [];
+        $nav = false;
+        if (isset($params['limit']) && (int)$params['limit'] > 0) {
+            $nav = [
+                'nPageSize' => (int)$params['limit'],
+                'iNumPage' => (int)$params['page'],
+            ];
+        }
+
+        if (empty($this->sqlBuilder)) {
+            $result = CIBlockElement::GetList($order, $filter, false, $nav, $select);
+            return $result instanceof CIBlockResult ? $result : null;
+        }
+
+        $el = new CIBlockElement();
+        $sql = ($this->sqlBuilder)($el);
+        if (empty($sql)) {
+            return null;
+        }
+
+        global $DB;
+        $res = $DB->Query($sql, false, "FILE: " . __FILE__ . "<br> LINE: " . __LINE__);
+        $res = new CIBlockResult($res);
+        $res->SetIBlockTag($el->arFilterIBlocks);
+        $res->arIBlockMultProps = $el->arIBlockMultProps;
+        $res->arIBlockConvProps = $el->arIBlockConvProps;
+        $res->arIBlockAllProps  = $el->arIBlockAllProps;
+        $res->arIBlockNumProps = $el->arIBlockNumProps;
+        $res->arIBlockLongProps = $el->arIBlockLongProps;
+
+        return $res;
+    }
+
+    public function prepareParams(array $params): array
+    {
+        $page = 1;
+        $limit = (int)$params['limit'];
+        $offset = (int)$params['offset'];
+        if ($limit > 0 && $offset > 0) {
+            $page = ((int)($offset / $limit)) + 1;
+        }
+
+        $result = [
+            'limit' => $limit,
+            'offset' => $offset,
+            'page' => $page,
+        ];
+
+        $filter = $params['filter'] ?? [];
+        if (!empty($filter)) {
+            foreach ($filter as $code => $value) {
+                $code = $this->prepareCode($code, true);
+                $result['filter'][$code] = $value;
+            }
+        }
+
+        $select = $params['select'] ?? [];
+        if (!empty($select)) {
+            foreach ($filter as $code) {
+                $code = $this->prepareCode($code, true);
+                $result['select'][] = $code;
+            }
+        }
+
+        $order = $params['order'] ?? [];
+        if (!empty($order)) {
+            foreach ($order as $code => $direction) {
+                $code = $this->prepareCode($code, false);
+                $result['order'][$code] = $direction;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string $code
+     * @param bool $withValue
+     * @return string
+     */
+    private function prepareCode(string $code, bool $withValue): string
+    {
+        $search = '_VALUE';
+        if (strpos($code, $search) === false) {
+            return $code;
+        }
+
+        $parts = [];
+        $isSuccess = (bool)preg_match(
+            "/([\=\<\>\!\~]*)(PROPERTY_|)(\S*)$search/",
+            $code,
+            $parts
+        );
+
+        if (!$isSuccess || count($parts) < 4) {
+            return $code;
+        }
+
+        $operation = $parts[1];
+        $propertyName = $parts[3];
+
+        return "{$operation}PROPERTY_{$propertyName}" . ($withValue ? $search : '');
     }
 
     /**
