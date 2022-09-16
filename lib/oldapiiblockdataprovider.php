@@ -132,7 +132,6 @@ class OldApiIblockDataProvider extends BaseDataProvider
     /**
      * @param QueryCriteriaInterface|null $query
      * @return Iterator
-     * @throws SystemException
      */
     protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
@@ -152,10 +151,25 @@ class OldApiIblockDataProvider extends BaseDataProvider
         }
 
         while ($item = $resSelect->Fetch()) {
-            yield $item;
+            yield $this->prepareResultItem($item);
         }
 
         return new EmptyIterator();
+    }
+
+    /**
+     * @param array $item
+     * @return array
+     */
+    private function prepareResultItem(array $item): array
+    {
+        $result = [];
+        foreach ($item as $key => $value) {
+            $key = str_replace('PROPERTY_', '', $key);
+            $result[$key] = $value;
+        }
+
+        return $result;
     }
 
     /**
