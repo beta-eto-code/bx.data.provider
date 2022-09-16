@@ -182,6 +182,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
         }
 
         $el = new CIBlockElement();
+        $el->prepareSql($select, $filter, false, $order);
         $sql = ($this->sqlBuilder)($el, (int)$params['limit'], (int)$params['offset']);
         if (empty($sql)) {
             return null;
