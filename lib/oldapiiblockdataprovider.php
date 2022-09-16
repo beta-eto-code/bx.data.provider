@@ -219,15 +219,15 @@ class OldApiIblockDataProvider extends BaseDataProvider
         $filter = $params['filter'] ?? [];
         if (!empty($filter)) {
             foreach ($filter as $code => $value) {
-                $code = $this->prepareCode($code, true);
+                $code = $this->prepareCode($code, false);
                 $result['filter'][$code] = $value;
             }
         }
 
         $select = $params['select'] ?? [];
         if (!empty($select)) {
-            foreach ($filter as $code) {
-                $code = $this->prepareCode($code, true);
+            foreach ($select as $code) {
+                $code = $this->prepareCode($code, false);
                 $result['select'][] = $code;
             }
         }
