@@ -25,6 +25,10 @@ class DataManagerDataProvider extends BaseDataProvider
      * @var DataManager
      */
     private $dataManagerClass;
+    /**
+     * @var array
+     */
+    private $defaultFilter = [];
 
     /**
      * @param mixed $className
@@ -46,13 +50,25 @@ class DataManagerDataProvider extends BaseDataProvider
     protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
-        $resultQuery = $this->dataManagerClass::getList($params);
+        if (!empty($this->defaultFilter)) {
+            $params['filter'] = array_merge($params['filter'] ?? [], $this->defaultFilter);
+        }
 
+        $resultQuery = $this->dataManagerClass::getList($params);
         while ($item = $resultQuery->fetch()) {
             yield $item;
         }
 
         return new EmptyIterator();
+    }
+
+    /**
+     * @param array $filter
+     * @return void
+     */
+    public function setDefaultFilter(array $filter)
+    {
+        $this->defaultFilter = $filter;
     }
 
     /**

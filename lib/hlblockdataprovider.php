@@ -46,6 +46,15 @@ class HlBlockDataProvider extends BaseDataProvider
     }
 
     /**
+     * @param array $filter
+     * @return void
+     */
+    public function setDefaultFilter(array $filter)
+    {
+        $this->dataManagerProvider->setDefaultFilter($filter);
+    }
+
+    /**
      * @param string $tableName
      * @return HlBlockDataProvider
      * @throws ArgumentException
