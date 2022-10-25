@@ -51,6 +51,7 @@ class GenerateTableCommand extends Command
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return int
+     * @psalm-suppress PossiblyUndefinedArrayOffset
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {

@@ -6,8 +6,9 @@ use Bitrix\Main\ArgumentNullException;
 use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Config\Option;
 use Data\Provider\Interfaces\MigrateResultInterface;
-use Data\Provider\Interfaces\OperationResultInterface;
 use Data\Provider\Interfaces\PkOperationResultInterface;
+use Data\Provider\Interfaces\StatisticMigrateResultInterface;
+use Data\Provider\StatisticMigrateResult;
 use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -46,22 +47,29 @@ class RunTaskCommand extends Command
     }
 
     /**
-     * @param MigrateResultInterface $result
-     * @return array
+     * @param OutputInterface $output
+     * @param string $className
+     * @param MigrateResultInterface|StatisticMigrateResultInterface $result
+     * @param string $type
+     * @param bool $isVerbose
+     * @return void
+     * @throws Exception
      */
-    private function calcResult(MigrateResultInterface $result): array
-    {
-        $resultList = $result->getResultList();
-        $count = 0;
-        $errorCount = 0;
-        foreach ($resultList as $r) {
-            $count += $r->getResultCount();
-            $errorCount += $r->getErrorResultCount();
+    private function printResult(
+        OutputInterface $output,
+        string $className,
+        $result,
+        string $type,
+        bool $isVerbose = false
+    ): void {
+        if ($result instanceof MigrateResultInterface) {
+            $this->printMigrateResult($output, $className, $result, $type, $isVerbose);
+            return;
         }
 
-        $successCount = $count - $errorCount;
-
-        return [$successCount, $errorCount];
+        if ($result instanceof StatisticMigrateResultInterface) {
+            $this->printStatisticResult($output, $className, $result, $type, $isVerbose);
+        }
     }
 
     /**
@@ -73,54 +81,80 @@ class RunTaskCommand extends Command
      * @return void
      * @throws Exception
      */
-    private function printResult(
+    private function printMigrateResult(
         OutputInterface $output,
         string $className,
         MigrateResultInterface $result,
         string $type,
         bool $isVerbose = false
     ) {
-        [
-            $successCount,
-            $errorCount
-        ] = $this->calcResult($result);
+        $statisticResult = StatisticMigrateResult::initFromMigrateResult($result);
+        $this->printStatisticResult($output, $className, $statisticResult, $type, $isVerbose);
+    }
 
-        $outputStyle = new OutputFormatterStyle('red', '#ff0', ['bold']);
-        $output->getFormatter()->setStyle('fire', $outputStyle);
+    /**
+     * @param OutputInterface $output
+     * @param string $className
+     * @param StatisticMigrateResultInterface $result
+     * @param string $type
+     * @param bool $isVerbose
+     * @return void
+     * @throws Exception
+     */
+    private function printStatisticResult(
+        OutputInterface $output,
+        string $className,
+        StatisticMigrateResultInterface $result,
+        string $type,
+        bool $isVerbose = false
+    ): void {
+        $message = $result->getResultMessage() ?:
+            $this->buildMessageFromStatisticResultAndType($result, $type, $className);
 
-        switch ($type) {
-            case 'import':
-                $output->writeln(
-                    "\n\n<fire>$className: импортировано - $successCount, ошибок импорта - $errorCount</fire>"
-                );
-                break;
-            case 'export':
-                $output->writeln(
-                    "\n\n<fire>$className: экспортировано - $successCount, ошибок экспорта - $errorCount</fire>"
-                );
-                break;
-            default:
-                $output->writeln(
-                    "\n\n<fire>$className: сгенерировано - $successCount, ошибок генерации - $errorCount</fire>"
-                );
-        }
-
-        if (!$isVerbose) {
+        $this->printText($output, $message);
+        $migrateResult = $result->getMigrateResult();
+        if (!$isVerbose || empty($migrateResult)) {
             return;
         }
 
-        foreach ($result->getResultList() as $r) {
+        foreach ($migrateResult->getResultList() as $r) {
             foreach ($r->getIterator() as $itemResult) {
                 /**
                  * @var PkOperationResultInterface $itemResult
                  */
                 if ($itemResult->hasError()) {
-                    $output->writeln("\n<error>Error: " . $itemResult->getErrorMessage() . '</error>');
+                    $this->printText($output, "\nError: " . $itemResult->getErrorMessage(), 'error');
                 } else {
-                    $output->writeln("\n<info>Success: " . json_encode($itemResult->getData()) . '</info>');
+                    $this->printText($output, "\nSuccess: " . json_encode($itemResult->getData()), 'info');
                 }
             }
         }
+    }
+
+    private function buildMessageFromStatisticResultAndType(
+        StatisticMigrateResultInterface $result,
+        string $className,
+        string $type
+    ): string {
+        $baseText = '- ' . $result->getSuccessCount() . ', ошибок - ' . $result->getErrorCount();
+        switch ($type) {
+            case 'import':
+                return "$className: импортировано $baseText";
+            case 'export':
+                return "$className: экспортировано $baseText";
+            case 'generate':
+                return "$className: сгенерировано $baseText";
+        }
+
+
+        return "$className: сгенерировано $baseText";
+    }
+
+    private function printText(OutputInterface $output, string $text, string $tag = 'fire'): void
+    {
+        $outputStyle = new OutputFormatterStyle('red', '#ff0', ['bold']);
+        $output->getFormatter()->setStyle('fire', $outputStyle);
+        $output->writeln("\n\n<$tag>$text</$tag>");
     }
 
     /**
@@ -169,7 +203,7 @@ class RunTaskCommand extends Command
      * @param OutputInterface $output
      * @return int
      * @throws Exception
-     * @psalm-suppress UnresolvableInclude
+     * @psalm-suppress UnresolvableInclude,PossiblyUndefinedArrayOffset
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -215,7 +249,7 @@ class RunTaskCommand extends Command
                 $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
             } catch (\Throwable $e) {
                 $currentShortName = $currentShortName ?? 'Unknown';
-                $output->writeln("\n\n<error>$currentShortName: " . $e->getMessage() . "</error>");
+                $this->printText($output, "\n\n$currentShortName: " . $e->getMessage(), 'error');
             }
         }
 

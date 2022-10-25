@@ -53,6 +53,7 @@ class GenerateIblockSectionCommand extends Command
      * @param OutputInterface $output
      * @return int
      * @throws SystemException
+     * @psalm-suppress PossiblyUndefinedArrayOffset
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {

@@ -59,6 +59,7 @@ class GenerateIblockCommand extends Command
      * @throws LoaderException
      * @throws ObjectPropertyException
      * @throws SystemException
+     * @psalm-suppress PossiblyUndefinedArrayOffset
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {

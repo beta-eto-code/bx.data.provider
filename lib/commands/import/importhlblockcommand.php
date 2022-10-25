@@ -43,6 +43,7 @@ class ImportHlBlockCommand extends Command
      * @param OutputInterface $output
      * @return int
      * @throws Exception
+     * @psalm-suppress PossiblyUndefinedArrayOffset
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
