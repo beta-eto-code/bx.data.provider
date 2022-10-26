@@ -109,7 +109,7 @@ class RunTaskCommand extends Command
         bool $isVerbose = false
     ): void {
         $message = $result->getResultMessage() ?:
-            $this->buildMessageFromStatisticResultAndType($result, $type, $className);
+            $this->buildMessageFromStatisticResultAndType($result, $className, $type);
 
         $this->printText($output, $message);
         $migrateResult = $result->getMigrateResult();
