@@ -147,7 +147,7 @@ class RunTaskCommand extends Command
         }
 
 
-        return "$className: сгенерировано $baseText";
+        return "$className: обработано $baseText";
     }
 
     private function printText(OutputInterface $output, string $text, string $tag = 'fire'): void
@@ -207,52 +207,14 @@ class RunTaskCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $type = $input->getOption('type');
-        $className = $input->getOption('className');
-        $isVerbose = $input->getOption('verbose');
-        $isNew = $input->getOption('new');
-        $basePath = $_SERVER['DOCUMENT_ROOT'] . "/local/dp/tasks/";
-
         $runCount = 0;
+        $isVerbose = (bool) $input->getOption('verbose');
         $runCounterData = $this->getRunCounterData();
-        foreach (glob("$basePath$type/*.php") as $file) {
-            try {
-                $classes = get_declared_classes();
-                require_once $file;
-                $diff = array_diff(get_declared_classes(), $classes);
-                $class = reset($diff);
-                if (!is_a($class, DataProviderTaskInterface::class, true)) {
-                    continue;
-                }
-
-                $currentType = current(explode('/', str_replace($basePath, '', $file)));
-                $currentShortName = basename(str_replace('\\', '/', $class));
-                if ($isNew && $this->getRunCountByClassName($currentShortName, $runCounterData) > 0) {
-                    continue;
-                }
-
-                if (!empty($className)) {
-                    if ($currentShortName === $className) {
-                        $this->incrementRunCounter($currentShortName, $runCounterData);
-                        $result = (new $class())->run();
-                        $runCount++;
-                        $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
-                        break;
-                    }
-
-                    continue;
-                }
-
-                /**
-                 * @var MigrateResultInterface $result
-                 */
-                $this->incrementRunCounter($currentShortName, $runCounterData);
-                $result = (new $class())->run();
+        $commandsForRun = $this->getCommandsForRun($input);
+        foreach ($commandsForRun as $command) {
+            $isSuccess = $this->runCommand($output, $command, $runCounterData, $isVerbose);
+            if ($isSuccess) {
                 $runCount++;
-                $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
-            } catch (\Throwable $e) {
-                $currentShortName = $currentShortName ?? 'Unknown';
-                $this->printText($output, "\n\n$currentShortName: " . $e->getMessage(), 'error');
             }
         }
 
@@ -263,5 +225,171 @@ class RunTaskCommand extends Command
         $this->saveRunCounterData($runCounterData);
 
         return 0;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @return array
+     * @psalm-suppress PossiblyUndefinedArrayOffset
+     */
+    private function getCommandsForRun(InputInterface $input): array
+    {
+        $type = $input->getOption('type');
+        $className = $input->getOption('className');
+        $isNew = $input->getOption('new');
+        $basePath = $_SERVER['DOCUMENT_ROOT'] . "/local/dp/tasks/";
+
+        $runCounterData = $this->getRunCounterData();
+        $commandForSort = [];
+        $commandForRun = [];
+        foreach ($this->loadAndGetClassListByPath("$basePath$type") as $file => $class) {
+            try {
+                if (!$this->isValidClass($class)) {
+                    continue;
+                }
+
+                $currentType = $this->getTypeCommandFromFilePath($basePath, $file);
+                $currentShortName = $this->getClassBaseName($class);
+                if ($isNew && $this->getRunCountByClassName($currentShortName, $runCounterData) > 0) {
+                    continue;
+                }
+
+                $sortIndex = $this->getSortIndexFromClass($class);
+                $commandData = [
+                    'class' => $class,
+                    'shortName' => $currentShortName,
+                    'type' => $currentType,
+                ];
+
+                if (!empty($className)) {
+                    if ($currentShortName === $className) {
+                        if ($sortIndex !== null) {
+                            $commandForSort[$sortIndex][] = $commandData;
+                        } else {
+                            $commandForRun[] = $commandData;
+                        }
+
+                        break;
+                    }
+
+                    continue;
+                }
+
+                /**
+                 * @var MigrateResultInterface $result
+                 */
+                $this->incrementRunCounter($currentShortName, $runCounterData);
+                if ($sortIndex !== null) {
+                    $commandForSort[$sortIndex][] = $commandData;
+                } else {
+                    $commandForRun[] = $commandData;
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        if (!empty($commandForSort)) {
+            $commandForRun = array_merge($this->getSortedCommandList($commandForSort), $commandForRun);
+        }
+
+        return $commandForRun;
+    }
+
+    /**
+     * @param string $path
+     * @return array<string,string>
+     */
+    private function loadAndGetClassListByPath(string $path): array
+    {
+        $classList = [];
+        foreach (glob("$path/*.php") as $file) {
+            $class = $this->getClassFromFile($file);
+            $classList[$file] = $class;
+        }
+
+        return $classList;
+    }
+
+    /**
+     * @param OutputInterface $output
+     * @param array $command
+     * @param array $runCounterData
+     * @param bool $isVerbose
+     * @return bool
+     */
+    private function runCommand(OutputInterface $output, array $command, array &$runCounterData, bool $isVerbose): bool
+    {
+        try {
+            $class = $command['class'] ?? null;
+            if (empty($class) || !$this->isValidClass($class)) {
+                return false;
+            }
+
+            $shortName = $command['shortName'] ?? '';
+            if (!empty($shortName)) {
+                $this->incrementRunCounter($shortName, $runCounterData);
+            }
+            /**
+             * @psalm-suppress InvalidStringClass
+             */
+            $result = (new $class())->run();
+
+            $type = $command['type'] ?? 'other';
+            $this->printResult($output, $shortName, $result, $type, $isVerbose);
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function getClassFromFile(string $filePath): string
+    {
+        $classes = get_declared_classes();
+        /**
+         * @psalm-suppress UnresolvableInclude
+         */
+        require_once $filePath;
+        $diff = array_diff(get_declared_classes(), $classes);
+        return reset($diff);
+    }
+
+    private function isValidClass(string $class): bool
+    {
+        return is_a($class, DataProviderTaskInterface::class, true);
+    }
+
+    private function getTypeCommandFromFilePath(string $basePath, string $file): string
+    {
+        return current(explode('/', str_replace($basePath, '', $file)));
+    }
+
+    private function getClassBaseName(string $class): string
+    {
+        return basename(str_replace('\\', '/', $class));
+    }
+
+    private function getSortIndexFromClass(string $class): ?int
+    {
+        /**
+         * @psalm-suppress UndefinedClass
+         */
+        if (is_a($class, SortableInterface::class, true)) {
+            return $class::getSort();
+        }
+
+        return null;
+    }
+
+    private function getSortedCommandList(array $unsortedCommandList): array
+    {
+        $sortedCommandList = [];
+        ksort($unsortedCommandList);
+        foreach ($unsortedCommandList as $sortIndexGroup) {
+            foreach ($sortIndexGroup as $command) {
+                $sortedCommandList[] = $command;
+            }
+        }
+
+        return $sortedCommandList;
     }
 }
