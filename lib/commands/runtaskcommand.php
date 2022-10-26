@@ -213,6 +213,7 @@ class RunTaskCommand extends Command
         $isNew = $input->getOption('new');
         $basePath = $_SERVER['DOCUMENT_ROOT'] . "/local/dp/tasks/";
 
+        $runCount = 0;
         $runCounterData = $this->getRunCounterData();
         foreach (glob("$basePath$type/*.php") as $file) {
             try {
@@ -234,6 +235,7 @@ class RunTaskCommand extends Command
                     if ($currentShortName === $className) {
                         $this->incrementRunCounter($currentShortName, $runCounterData);
                         $result = (new $class())->run();
+                        $runCount++;
                         $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
                         break;
                     }
@@ -246,11 +248,16 @@ class RunTaskCommand extends Command
                  */
                 $this->incrementRunCounter($currentShortName, $runCounterData);
                 $result = (new $class())->run();
+                $runCount++;
                 $this->printResult($output, $currentShortName, $result, $currentType, $isVerbose);
             } catch (\Throwable $e) {
                 $currentShortName = $currentShortName ?? 'Unknown';
                 $this->printText($output, "\n\n$currentShortName: " . $e->getMessage(), 'error');
             }
+        }
+
+        if ($runCount === 0) {
+            $this->printText($output, 'Команды для запуска не найдены', 'error');
         }
 
         $this->saveRunCounterData($runCounterData);
