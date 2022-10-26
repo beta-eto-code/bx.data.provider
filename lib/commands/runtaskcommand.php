@@ -152,7 +152,7 @@ class RunTaskCommand extends Command
 
     private function printText(OutputInterface $output, string $text, string $tag = 'fire'): void
     {
-        $outputStyle = new OutputFormatterStyle('red', '#ff0', ['bold']);
+        $outputStyle = new OutputFormatterStyle('black', '#ff0', ['bold']);
         $output->getFormatter()->setStyle('fire', $outputStyle);
         $output->writeln("\n\n<$tag>$text</$tag>");
     }
