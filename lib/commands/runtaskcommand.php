@@ -338,6 +338,7 @@ class RunTaskCommand extends Command
             $this->printResult($output, $shortName, $result, $type, $isVerbose);
             return true;
         } catch (\Throwable $e) {
+            $this->printText($output, $e->getMessage(), 'error');
             return false;
         }
     }
