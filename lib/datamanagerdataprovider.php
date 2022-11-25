@@ -24,7 +24,7 @@ class DataManagerDataProvider extends BaseDataProvider
     /**
      * @var DataManager
      */
-    private $dataManagerClass;
+    protected $dataManagerClass;
     /**
      * @var array
      */
