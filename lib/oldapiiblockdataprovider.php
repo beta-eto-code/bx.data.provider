@@ -84,6 +84,29 @@ class OldApiIblockDataProvider extends BaseDataProvider
     }
 
     /**
+     * @throws LoaderException
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    public static function initByIblockId(int $iblockId): OldApiIblockDataProvider
+    {
+        Loader::includeModule('iblock');
+        $iblock = IblockTable::getList([
+            'filter' => [
+                '=ID' => $iblockId
+            ],
+            'limit' => 1,
+        ])->fetchObject();
+
+        if (empty($iblock)) {
+            throw new Exception('iblock is not found');
+        }
+
+        return new OldApiIblockDataProvider($iblock);
+    }
+
+    /**
      * @param array $defaultFilter
      * @param bool $useWorkflow
      * @return OldApiIblockDataProvider
