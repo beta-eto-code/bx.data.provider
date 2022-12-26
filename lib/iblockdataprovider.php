@@ -6,6 +6,7 @@ use ArrayObject;
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Iblock\ORM\ElementEntity;
 use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Engine\CurrentUser;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
@@ -66,6 +67,17 @@ class IblockDataProvider extends DataManagerDataProvider
      */
     private function initItem($data, int $pk = null): EntityObject
     {
+        $currentUserId = $this->getCurrentUserId();
+        $createdByIsEmpty = array_key_exists('CREATED_BY', $data) === false;
+        if ($createdByIsEmpty && $currentUserId > 0) {
+            $data['CREATED_BY'] = $currentUserId;
+        }
+
+        $modifiedByIsEmpty = array_key_exists('MODIFIED_BY', $data) === false;
+        if ($modifiedByIsEmpty && $currentUserId > 0) {
+            $data['MODIFIED_BY'] = $currentUserId;
+        }
+
         $item = $this->elementEntity->createObject();
         if ((int)$pk > 0) {
             $item->setId($pk);
@@ -197,5 +209,10 @@ class IblockDataProvider extends DataManagerDataProvider
         return $mainResult instanceof PkOperationResultInterface ?
             $mainResult :
             new OperationResult('Данные для сохранения не найдены', $dataResult);
+    }
+
+    private function getCurrentUserId(): int
+    {
+        return (int) CurrentUser::get()->getId();
     }
 }
