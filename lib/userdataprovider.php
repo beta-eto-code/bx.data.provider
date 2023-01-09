@@ -89,7 +89,10 @@ class UserDataProvider extends DataManagerDataProvider
         $bxQuery = BxQueryAdapter::init($query);
         $pkListForDelete = $this->getPkValuesByQuery($bxQuery);
         if (empty($pkListForDelete)) {
-            return new OperationResult('Пользователи для удаления не найдены', $dataResult);
+            return new OperationResult(
+                'Пользователи для удаления не найдены',
+                $dataResult
+            );
         }
 
         $mainResult = null;

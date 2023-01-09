@@ -2,10 +2,14 @@
 
 namespace BX\Data\Provider;
 
+use Data\Provider\AndCompareRuleGroup;
 use Data\Provider\CompareRule;
+use Data\Provider\Interfaces\CompareRuleGroupInterface;
 use Data\Provider\Interfaces\CompareRuleInterface;
+use Data\Provider\Interfaces\ComplexAndCompareRuleInterface;
+use Data\Provider\Interfaces\ComplexOrCompareRuleInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
-use Data\Provider\QueryCriteria;
+use Data\Provider\OrCompareRuleGroup;
 
 class BxQueryAdapter
 {
@@ -58,17 +62,6 @@ class BxQueryAdapter
     }
 
     /**
-     * @param string $name
-     * @param mixed $value
-     * @return CompareRuleInterface
-     */
-    private static function createCompareRule(string $name, $value): CompareRuleInterface
-    {
-        [$name, $operation] = static::getOperation($name, $value);
-        return new CompareRule($name, $operation, $value);
-    }
-
-    /**
      * @param CompareRuleInterface $mainRule
      * @param CompareRuleInterface $slaveRule
      * @param bool $isOrLogic
@@ -79,9 +72,9 @@ class BxQueryAdapter
         CompareRuleInterface $slaveRule,
         bool $isOrLogic = false
     ) {
-        if ($isOrLogic) {
+        if ($isOrLogic && $mainRule instanceof ComplexOrCompareRuleInterface) {
             $mainRule->orCompareRule($slaveRule);
-        } else {
+        } elseif ($mainRule instanceof ComplexAndCompareRuleInterface) {
             $mainRule->andCompareRule($slaveRule);
         }
     }
@@ -98,33 +91,84 @@ class BxQueryAdapter
         $mainCriteria = null;
         $isOrLogic = $logic === 'OR';
         foreach ($filterData as $name => $value) {
-            if (is_int($name) && is_array($value) && count($value) === 1) {
-                $name = array_key_first($value);
-                $value = current($value);
+            $compareRule = static::createCompareRule($name, $value);
+            if (is_null($compareRule)) {
+                continue;
             }
 
-            if (is_int($name) && is_array($value) && !empty($value)) {
-                $compareRule = static::buildCriteria($value);
-                if (is_null($compareRule)) {
-                    continue;
-                }
-
-                if (is_null($mainCriteria)) {
-                    $mainCriteria = $compareRule;
-                } else {
-                    static::mergeRules($mainCriteria, $compareRule, $isOrLogic);
-                }
-            } elseif (is_string($name) && !empty($name)) {
-                $compareRule = static::createCompareRule($name, $value);
-                if (is_null($mainCriteria)) {
-                    $mainCriteria = $compareRule;
-                } else {
-                    static::mergeRules($mainCriteria, $compareRule, $isOrLogic);
-                }
+            if (is_null($mainCriteria)) {
+                $mainCriteria = $compareRule;
+            } else {
+                static::mergeRules($mainCriteria, $compareRule, $isOrLogic);
             }
         }
 
         return $mainCriteria;
+    }
+
+    /**
+     * @param mixed $name
+     * @param mixed $value
+     * @return CompareRuleInterface|null
+     */
+    private static function createCompareRule($name, $value): ?CompareRuleInterface
+    {
+        if (static::isGroup($name, $value)) {
+            $logic = strtoupper($value['LOGIC'] ?? '');
+            unset($value['LOGIC']);
+            $isOrLogic = $logic === 'OR';
+
+            return static::createCompareRuleGroup($isOrLogic, $value);
+        } elseif (is_string($name) && !empty($name)) {
+            return static::createSimpleCompareRule($name, $value);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $name
+     * @param mixed $value
+     * @return bool
+     */
+    private static function isGroup($name, $value): bool
+    {
+        return is_int($name) && is_array($value) && !empty($value);
+    }
+
+    private static function createCompareRuleGroup(bool $isOrRule, array $filterData): ?CompareRuleInterface
+    {
+        $compareRuleGroup = null;
+        foreach ($filterData as $name => $value) {
+            $compareRule = static::createCompareRule($name, $value);
+            if (empty($compareRule)) {
+                continue;
+            }
+
+            if (!($compareRuleGroup instanceof CompareRuleGroupInterface)) {
+                $compareRuleGroup = $isOrRule ? new OrCompareRuleGroup($compareRule) :
+                    new AndCompareRuleGroup($compareRule);
+            } else {
+                $compareRuleGroup->addCompareRule($compareRule);
+            }
+        }
+
+        return $compareRuleGroup instanceof CompareRuleInterface ? $compareRuleGroup : null;
+    }
+
+    /**
+     * @param string $name
+     * @param mixed $value
+     * @return CompareRuleInterface|null
+     */
+    private static function createSimpleCompareRule(string $name, $value): ?CompareRuleInterface
+    {
+        if (empty($name)) {
+            return null;
+        }
+
+        [$name, $operation] = static::getOperation($name, $value);
+        return new CompareRule($name, $operation, $value);
     }
 
     /**
@@ -134,12 +178,36 @@ class BxQueryAdapter
      */
     private static function addCriteria(QueryCriteriaInterface $query, array $filterData)
     {
-        $compareRule = static::buildCriteria($filterData);
-        if (is_null($compareRule)) {
-            return;
+        foreach (static::getPartsOfFilter($filterData) as $filterPart) {
+            $compareRule = static::buildCriteria($filterPart);
+            if ($compareRule instanceof CompareRuleInterface) {
+                $query->addCompareRule($compareRule);
+            }
+        }
+    }
+
+    private static function getPartsOfFilter(array $filterData): array
+    {
+        $mainPart = [];
+        $parts = [];
+        foreach ($filterData as $key => $value) {
+            if (is_int($key) && is_array($value)) {
+                if (empty($value)) {
+                    continue;
+                }
+
+                $parts[] = $value;
+                continue;
+            }
+
+            $mainPart[$key] = $value;
         }
 
-        $query->addCompareRule($compareRule);
+        if (!empty($mainPart)) {
+            $parts[] = $mainPart;
+        }
+
+        return $parts;
     }
 
     public static function initFromArray(array $params): BxQueryAdapter
@@ -212,9 +280,6 @@ class BxQueryAdapter
             case CompareRuleInterface::EQUAL:
                 $filter["={$key}"] = $value;
                 break;
-            case CompareRuleInterface::EQUAL:
-                $filter["={$key}"] = $value;
-                break;
             case CompareRuleInterface::NOT:
                 $filter["!{$key}"] = $value;
                 break;
@@ -256,20 +321,24 @@ class BxQueryAdapter
                 break;
         }
 
-        foreach ($compareRule->getAndList() as $andCompareRule) {
-            if (!empty($andCompareRule->getOrList())) {
-                $filter[] = $this->buildFilterRule($andCompareRule);
-            } else {
-                $filter = array_merge($filter, $this->buildFilterRule($andCompareRule));
+        if ($compareRule instanceof ComplexAndCompareRuleInterface) {
+            foreach ($compareRule->getAndList() as $andCompareRule) {
+                if ($andCompareRule instanceof ComplexOrCompareRuleInterface && !empty($andCompareRule->getOrList())) {
+                    $filter[] = $this->buildFilterRule($andCompareRule);
+                } else {
+                    $filter = array_merge($filter, $this->buildFilterRule($andCompareRule));
+                }
             }
         }
 
-        foreach ($compareRule->getOrList() as $orCompareRule) {
-            $filter = [
-                'LOGIC' => 'OR',
-                $filter,
-                $this->buildFilterRule($orCompareRule)
-            ];
+        if ($compareRule instanceof ComplexOrCompareRuleInterface) {
+            foreach ($compareRule->getOrList() as $orCompareRule) {
+                $filter = [
+                    'LOGIC' => 'OR',
+                    $filter,
+                    $this->buildFilterRule($orCompareRule)
+                ];
+            }
         }
 
         return $filter;
@@ -282,7 +351,7 @@ class BxQueryAdapter
     {
         $filter = [];
         foreach ($this->query->getCriteriaList() as $compareRule) {
-            if (!empty($compareRule->getOrList())) {
+            if ($compareRule instanceof ComplexOrCompareRuleInterface && !empty($compareRule->getOrList())) {
                 $filter[] = $this->buildFilterRule($compareRule);
             } else {
                 $filter = array_merge($filter, $this->buildFilterRule($compareRule));
