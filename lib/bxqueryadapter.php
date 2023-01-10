@@ -185,40 +185,10 @@ class BxQueryAdapter
      */
     private static function addCriteria(QueryCriteriaInterface $query, array $filterData)
     {
-        foreach (static::getPartsOfFilter($filterData) as $filterPart) {
-            $compareRule = static::buildCriteria($filterPart);
-            if ($compareRule instanceof CompareRuleInterface) {
-                $query->addCompareRule($compareRule);
-            }
+        $compareRule = static::buildCriteria($filterData);
+        if ($compareRule instanceof CompareRuleInterface) {
+            $query->addCompareRule($compareRule);
         }
-    }
-
-    private static function getPartsOfFilter(array $filterData): array
-    {
-        if (static::hasOrLogic($filterData)) {
-            return [$filterData];
-        }
-
-        $mainPart = [];
-        $parts = [];
-        foreach ($filterData as $key => $value) {
-            if (is_int($key) && is_array($value)) {
-                if (empty($value)) {
-                    continue;
-                }
-
-                $parts[] = $value;
-                continue;
-            }
-
-            $mainPart[$key] = $value;
-        }
-
-        if (!empty($mainPart)) {
-            $parts[] = $mainPart;
-        }
-
-        return $parts;
     }
 
     public static function initFromArray(array $params): BxQueryAdapter
