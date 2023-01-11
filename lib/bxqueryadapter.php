@@ -255,14 +255,36 @@ class BxQueryAdapter
     {
         $filter = [];
         if ($compareRule instanceof CompareRuleGroupInterface) {
+            $duplicateKeys = [];
             foreach ($compareRule->getList() as $cr) {
                 $crResult = $this->buildFilterRule($cr);
                 $crResultSize = count($crResult);
+                if (empty($crResultSize)) {
+                    continue;
+                }
+
                 if ($crResultSize > 1) {
                     $filter[] = $crResult;
-                } elseif ($crResultSize === 1) {
-                    $filter = array_merge($filter, $this->buildFilterRule($cr));
+                    continue;
                 }
+
+                $key = array_key_first($crResult);
+                if (is_null($key)) {
+                    continue;
+                }
+
+                if (!array_key_exists($key, $duplicateKeys)) {
+                    $filter = array_merge($filter, $crResult);
+                    $duplicateKeys[$key] = $key;
+                    continue;
+                }
+
+                if (array_key_exists($key, $filter)) {
+                    $filter[] = [$key => $filter[$key]];
+                    unset($filter[$key]);
+                }
+
+                $filter[] = $crResult;
             }
 
             if ($compareRule instanceof OrCompareRuleGroup && !empty($filter)) {
@@ -322,11 +344,7 @@ class BxQueryAdapter
 
         if ($compareRule instanceof ComplexAndCompareRuleInterface) {
             foreach ($compareRule->getAndList() as $andCompareRule) {
-                if ($andCompareRule instanceof ComplexOrCompareRuleInterface && !empty($andCompareRule->getOrList())) {
-                    $filter[] = $this->buildFilterRule($andCompareRule);
-                } else {
-                    $filter = array_merge($filter, $this->buildFilterRule($andCompareRule));
-                }
+                $filter = array_merge($filter, $this->buildFilterRule($andCompareRule));
             }
         }
 
