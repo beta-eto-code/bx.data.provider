@@ -42,30 +42,45 @@ class OldApiIblockDataProvider extends BaseDataProvider
      * @var null|callable(CIBlockElement $el, int $limit, int $offset): string
      */
     private $sqlBuilder;
+    /**
+     * @var bool
+     */
+    private $enableComplexProperty;
+    private bool $partialPropertyUpdate;
 
     /**
      * @param EntityObject|null $iblock
      * @param bool $useWorkflow
+     * @param bool $partialPropertyUpdate
+     * @param bool $enableComplexProperty
+     * @throws SystemException
      */
-    private function __construct(?EntityObject $iblock = null, bool $useWorkflow = false)
-    {
+    private function __construct(
+        ?EntityObject $iblock = null,
+        bool $useWorkflow = false,
+        bool $partialPropertyUpdate = false,
+        bool $enableComplexProperty = true
+    ) {
         parent::__construct('ID');
         $this->iblock = $iblock;
         $this->useWorkflow = $useWorkflow;
         $this->defaultFilter = ['IBLOCK_ID' => $this->getIblockId()];
+        $this->partialPropertyUpdate = $partialPropertyUpdate;
+        $this->enableComplexProperty = $enableComplexProperty;
     }
 
     /**
-     * @param string $iblockType
-     * @param string $iblockCode
-     * @param bool $useWorkflow
-     * @return OldApiIblockDataProvider
-     * @throws Exception
+     * @throws ArgumentException
+     * @throws LoaderException
+     * @throws ObjectPropertyException
+     * @throws SystemException
      */
     public static function initByIblock(
         string $iblockType,
         string $iblockCode,
-        bool $useWorkflow = false
+        bool $useWorkflow = false,
+        bool $partialPropertyUpdate = false,
+        bool $enableComplexProperty = true
     ): OldApiIblockDataProvider {
         Loader::includeModule('iblock');
         $iblock = IblockTable::getList([
@@ -80,7 +95,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
             throw new Exception('iblock is not found');
         }
 
-        return new OldApiIblockDataProvider($iblock, $useWorkflow);
+        return new OldApiIblockDataProvider($iblock, $useWorkflow, $partialPropertyUpdate, $enableComplexProperty);
     }
 
     /**
@@ -88,9 +103,13 @@ class OldApiIblockDataProvider extends BaseDataProvider
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
+     * @throws Exception
      */
-    public static function initByIblockId(int $iblockId): OldApiIblockDataProvider
-    {
+    public static function initByIblockId(
+        int $iblockId,
+        bool $partialPropertyUpdate = false,
+        bool $enableComplexProperty = true
+    ): OldApiIblockDataProvider {
         Loader::includeModule('iblock');
         $iblock = IblockTable::getList([
             'filter' => [
@@ -103,13 +122,14 @@ class OldApiIblockDataProvider extends BaseDataProvider
             throw new Exception('iblock is not found');
         }
 
-        return new OldApiIblockDataProvider($iblock);
+        return new OldApiIblockDataProvider($iblock, false, $partialPropertyUpdate, $enableComplexProperty);
     }
 
     /**
      * @param array $defaultFilter
      * @param bool $useWorkflow
      * @return OldApiIblockDataProvider
+     * @throws SystemException
      */
     public static function initByDefaultFilter(
         array $defaultFilter,
@@ -325,7 +345,7 @@ class OldApiIblockDataProvider extends BaseDataProvider
             }
 
             $k = str_replace($searchKey, '', $key);
-            $result['PROPERTY_VALUES'][$k] = $value;
+            $result['PROPERTY_VALUES'][$k] = $this->enableComplexProperty ? $this->getUpdatedProperty($value) : $value;
         }
 
         return $result;
@@ -379,10 +399,23 @@ class OldApiIblockDataProvider extends BaseDataProvider
 
         $mainResult = null;
         foreach ($pkListForSave as $id) {
-            /**
-             * @psalm-suppress UndefinedClass
-             */
-            $isSuccess = (bool)$iblockElementInst->Update($id, $dataForSave, $this->useWorkflow);
+            $properties = $dataForSave['PROPERTY_VALUES'];
+            $fields = $dataForSave;
+            unset($fields['PROPERTY_VALUES']);
+
+            $isSuccess = true;
+            if (!empty($fields)) {
+                /**
+                 * @psalm-suppress UndefinedClass
+                 */
+                $isSuccess = (bool)$iblockElementInst->Update($id, $fields, $this->useWorkflow);
+            }
+
+            if ($this->partialPropertyUpdate) {
+                $iblockElementInst::SetPropertyValuesEx($id, $this->getIblockId(), $properties);
+            } else {
+                $iblockElementInst::SetPropertyValues($id, $this->getIblockId(), $properties);
+            }
 
             /**
              * @psalm-suppress UndefinedClass
@@ -405,6 +438,37 @@ class OldApiIblockDataProvider extends BaseDataProvider
         return $mainResult instanceof PkOperationResultInterface ?
             $mainResult :
             new OperationResult('Данные для сохранения не найдены', $dataResult);
+    }
+
+    /**
+     * @param mixed $property
+     * @return mixed
+     */
+    private function getUpdatedProperty($property)
+    {
+        if (!is_array($property)) {
+            return $property;
+        }
+
+        if ($this->hasStringKeys($property) && !array_key_exists('VALUE', $property)) {
+            return ['VALUE' => $property, 'DESCRIPTION' => $property['DESCRIPTION'] ?: ''];
+        } elseif (!$this->hasStringKeys($property)) {
+            foreach ($property as $k => $v) {
+                $property[$k] = $this->getUpdatedProperty($v);
+            }
+        }
+        return $property;
+    }
+
+    private function hasStringKeys(array $data): bool
+    {
+        foreach ($data as $key => $value) {
+            if (is_string($key)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
