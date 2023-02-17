@@ -24,7 +24,7 @@ use EmptyIterator;
 use Exception;
 use Iterator;
 
-class OldApiIblockDataProvider extends BaseDataProvider
+class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataProviderInterface
 {
     /**
      * @var EntityObject|null
@@ -152,6 +152,19 @@ class OldApiIblockDataProvider extends BaseDataProvider
         }
 
         return (int)$this->iblock->getId();
+    }
+
+    /**
+     * @return string
+     * @throws SystemException
+     */
+    public function getIblockCode(): string
+    {
+        if (!($this->iblock instanceof EntityObject)) {
+            return '';
+        }
+
+        return (string)$this->iblock->get('CODE');
     }
 
     /**

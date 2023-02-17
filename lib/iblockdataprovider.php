@@ -20,7 +20,7 @@ use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
 use Exception;
 
-class IblockDataProvider extends DataManagerDataProvider
+class IblockDataProvider extends DataManagerDataProvider implements IblockDataProviderInterface
 {
     /**
      * @var ElementEntity
@@ -138,6 +138,19 @@ class IblockDataProvider extends DataManagerDataProvider
         }
 
         return (int)$this->iblock->getId();
+    }
+
+    /**
+     * @return string
+     * @throws SystemException
+     */
+    public function getIblockCode(): string
+    {
+        if (!($this->iblock instanceof EntityObject)) {
+            return '';
+        }
+
+        return (string)$this->iblock->get('CODE');
     }
 
     /**
