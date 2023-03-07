@@ -167,6 +167,15 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         return (string)$this->iblock->get('CODE');
     }
 
+    public function getIblockType(): string
+    {
+        if (!($this->iblock instanceof EntityObject)) {
+            return '';
+        }
+
+        return (string)$this->iblock->get('IBLOCK_TYPE_ID');
+    }
+
     /**
      * @param array $filter
      * @return void
