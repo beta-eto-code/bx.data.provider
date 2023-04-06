@@ -93,6 +93,10 @@ class IblockDataProvider extends DataManagerDataProvider implements IblockDataPr
             if ($key !== 'ID' && !is_null($value) && !is_array($value)) {
                 $item->set($key, $value);
             }
+
+            if (is_array($value) && array_key_exists('TEXT', $value) && array_key_exists('TYPE', $value)) {
+                $item->set($key, $value);
+            }
         }
 
         return $item;
