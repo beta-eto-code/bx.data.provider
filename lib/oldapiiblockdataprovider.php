@@ -256,6 +256,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         }
 
         if (empty($this->sqlBuilder)) {
+            $this->updateFilterForOldApi($filter);
             $result = CIBlockElement::GetList($order, $filter, false, $nav, $select);
             return $result instanceof CIBlockResult ? $result : null;
         }
@@ -349,6 +350,14 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         $propertyName = $parts[3];
 
         return "{$operation}PROPERTY_{$propertyName}" . ($withValue ? $search : '');
+    }
+
+    private function updateFilterForOldApi(array &$filter)
+    {
+        if (isset($filter['=PERMISSIONS_BY'])) {
+            $filter['PERMISSIONS_BY'] = $filter['=PERMISSIONS_BY'];
+            unset($filter['=PERMISSIONS_BY']);
+        }
     }
 
     /**
