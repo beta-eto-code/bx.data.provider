@@ -12,7 +12,6 @@ use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Objectify\EntityObject;
 use Bitrix\Main\SystemException;
-use CIBlockElement;
 use CIBlockResult;
 use Data\Provider\Interfaces\CompareRuleInterface;
 use Data\Provider\Interfaces\OperationResultInterface;
@@ -24,49 +23,26 @@ use EmptyIterator;
 use Exception;
 use Iterator;
 
-class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataProviderInterface
+class OldApiIblockSectionDataProvider extends BaseDataProvider implements IblockDataProviderInterface
 {
     /**
      * @var EntityObject|null
      */
     private $iblock;
     /**
-     * @var bool
-     */
-    private $useWorkflow = false;
-    /**
      * @var array
      */
     private $defaultFilter = [];
-    /**
-     * @var null|callable(CIBlockElement $el, int $limit, int $offset): string
-     */
-    private $sqlBuilder;
-    /**
-     * @var bool
-     */
-    private $enableComplexProperty;
-    private bool $partialPropertyUpdate;
 
     /**
      * @param EntityObject|null $iblock
-     * @param bool $useWorkflow
-     * @param bool $partialPropertyUpdate
-     * @param bool $enableComplexProperty
      * @throws SystemException
      */
-    private function __construct(
-        ?EntityObject $iblock = null,
-        bool $useWorkflow = false,
-        bool $partialPropertyUpdate = false,
-        bool $enableComplexProperty = true
-    ) {
+    private function __construct(?EntityObject $iblock = null)
+    {
         parent::__construct('ID');
         $this->iblock = $iblock;
-        $this->useWorkflow = $useWorkflow;
         $this->defaultFilter = ['IBLOCK_ID' => $this->getIblockId()];
-        $this->partialPropertyUpdate = $partialPropertyUpdate;
-        $this->enableComplexProperty = $enableComplexProperty;
     }
 
     /**
@@ -77,11 +53,8 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
      */
     public static function initByIblock(
         string $iblockType,
-        string $iblockCode,
-        bool $useWorkflow = false,
-        bool $partialPropertyUpdate = false,
-        bool $enableComplexProperty = true
-    ): OldApiIblockDataProvider {
+        string $iblockCode
+    ): OldApiIblockSectionDataProvider {
         Loader::includeModule('iblock');
         $iblock = IblockTable::getList([
             'filter' => [
@@ -95,7 +68,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             throw new Exception('iblock is not found');
         }
 
-        return new OldApiIblockDataProvider($iblock, $useWorkflow, $partialPropertyUpdate, $enableComplexProperty);
+        return new OldApiIblockSectionDataProvider($iblock);
     }
 
     /**
@@ -105,11 +78,8 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
      * @throws SystemException
      * @throws Exception
      */
-    public static function initByIblockId(
-        int $iblockId,
-        bool $partialPropertyUpdate = false,
-        bool $enableComplexProperty = true
-    ): OldApiIblockDataProvider {
+    public static function initByIblockId(int $iblockId): OldApiIblockSectionDataProvider
+    {
         Loader::includeModule('iblock');
         $iblock = IblockTable::getList([
             'filter' => [
@@ -122,20 +92,16 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             throw new Exception('iblock is not found');
         }
 
-        return new OldApiIblockDataProvider($iblock, false, $partialPropertyUpdate, $enableComplexProperty);
+        return new OldApiIblockSectionDataProvider($iblock);
     }
 
     /**
      * @param array $defaultFilter
-     * @param bool $useWorkflow
-     * @return OldApiIblockDataProvider
-     * @throws SystemException
+     * @return OldApiIblockSectionDataProvider
      */
-    public static function initByDefaultFilter(
-        array $defaultFilter,
-        bool $useWorkflow = false
-    ): OldApiIblockDataProvider {
-        $result = new OldApiIblockDataProvider(null, $useWorkflow);
+    public static function initByDefaultFilter(array $defaultFilter): OldApiIblockSectionDataProvider
+    {
+        $result = new OldApiIblockSectionDataProvider(null);
         $result->setDefaultFilter($defaultFilter);
 
         return $result;
@@ -186,22 +152,13 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
     }
 
     /**
-     * @param callable(CIBlockElement $el, int $limit, int $offset): string $fnBuild
-     * @return void
-     */
-    public function setSqlBuilder(callable $fnBuild)
-    {
-        $this->sqlBuilder = $fnBuild;
-    }
-
-    /**
      * @param QueryCriteriaInterface|null $query
      * @return Iterator
      */
     protected function getInternalIterator(QueryCriteriaInterface $query = null): Iterator
     {
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
-        $params['select'] = $params['select'] ?? ['*', 'PROPERTY_*'];
+        $params['select'] = $params['select'] ?? ['*', 'UF_*'];
         $defaultFilter = $this->defaultFilter;
         if (!empty($defaultFilter)) {
             $params['filter'] = array_merge($params['filter'] ?? [], $defaultFilter);
@@ -216,25 +173,10 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         }
 
         while ($item = $resSelect->Fetch()) {
-            yield $this->prepareResultItem($item);
+            yield $item;
         }
 
         return new EmptyIterator();
-    }
-
-    /**
-     * @param array $item
-     * @return array
-     */
-    private function prepareResultItem(array $item): array
-    {
-        $result = [];
-        foreach ($item as $key => $value) {
-            $key = str_replace('PROPERTY_', '', $key);
-            $result[$key] = $value;
-        }
-
-        return $result;
     }
 
     /**
@@ -255,30 +197,9 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             ];
         }
 
-        if (empty($this->sqlBuilder)) {
-            $this->updateFilterForOldApi($filter);
-            $result = CIBlockElement::GetList($order, $filter, false, $nav, $select);
-            return $result instanceof CIBlockResult ? $result : null;
-        }
-
-        $el = new CIBlockElement();
-        $el->prepareSql($select, $filter, false, $order);
-        $sql = ($this->sqlBuilder)($el, (int)$params['limit'], (int)$params['offset']);
-        if (empty($sql)) {
-            return null;
-        }
-
-        global $DB;
-        $res = $DB->Query($sql, false, "FILE: " . __FILE__ . "<br> LINE: " . __LINE__);
-        $res = new CIBlockResult($res);
-        $res->SetIBlockTag($el->arFilterIBlocks);
-        $res->arIBlockMultProps = $el->arIBlockMultProps;
-        $res->arIBlockConvProps = $el->arIBlockConvProps;
-        $res->arIBlockAllProps  = $el->arIBlockAllProps;
-        $res->arIBlockNumProps = $el->arIBlockNumProps;
-        $res->arIBlockLongProps = $el->arIBlockLongProps;
-
-        return $res;
+        $this->updateFilterForOldApi($filter);
+        $result = \CIBlockSection::GetList($order, $filter, false, $select, $nav);
+        return $result instanceof CIBlockResult ? $result : null;
     }
 
     public function prepareParams(array $params): array
@@ -298,73 +219,37 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
 
         $filter = $params['filter'] ?? [];
         if (!empty($filter)) {
-            foreach ($filter as $code => $value) {
-                $code = $this->prepareCode($code, false);
-                $result['filter'][$code] = $value;
-            }
+            $result['filter'] = $filter;
         }
 
         $select = $params['select'] ?? [];
         if (!empty($select)) {
             foreach ($select as $code) {
-                $code = $this->prepareCode($code, false);
                 $result['select'][] = $code;
             }
         }
 
         $order = $params['order'] ?? [];
         if (!empty($order)) {
-            foreach ($order as $code => $direction) {
-                $code = $this->prepareCode($code, false);
-                $result['order'][$code] = $direction;
-            }
+            $result['order'] = $order;
         }
 
         return $result;
     }
 
-    /**
-     * @param string $code
-     * @param bool $withValue
-     * @return string
-     */
-    private function prepareCode(string $code, bool $withValue): string
-    {
-        $search = '_VALUE';
-        if (strpos($code, $search) === false) {
-            return $code;
-        }
-
-        $parts = [];
-        $isSuccess = (bool)preg_match(
-            "/([\=\<\>\!\~]*)(PROPERTY_|)(\S*)$search/",
-            $code,
-            $parts
-        );
-
-        if (!$isSuccess || count($parts) < 4) {
-            return $code;
-        }
-
-        $operation = $parts[1];
-        $propertyName = $parts[3];
-
-        return "{$operation}PROPERTY_{$propertyName}" . ($withValue ? $search : '');
-    }
-
     private function updateFilterForOldApi(array &$filter): void
     {
+        if (isset($filter['=CHECK_PERMISSIONS'])) {
+            $filter['CHECK_PERMISSIONS'] = $filter['=CHECK_PERMISSIONS'];
+            unset($filter['=CHECK_PERMISSIONS']);
+        }
         if (isset($filter['=PERMISSIONS_BY'])) {
             $filter['PERMISSIONS_BY'] = $filter['=PERMISSIONS_BY'];
             unset($filter['=PERMISSIONS_BY']);
         }
-        if (isset($filter['=INCLUDE_SUBSECTIONS'])) {
-            $filter['INCLUDE_SUBSECTIONS'] = $filter['=INCLUDE_SUBSECTIONS'];
-            unset($filter['=INCLUDE_SUBSECTIONS']);
-        }
-        if (isset($filter['=MIN_PERMISSION'])) {
-            $filter['MIN_PERMISSION'] = $filter['=MIN_PERMISSION'];
-            unset($filter['=MIN_PERMISSION']);
+        if (isset($filter['=IBLOCK_SECTION_ID'])) {
+            $filter['=SECTION_ID'] = $filter['=IBLOCK_SECTION_ID'];
+            unset($filter['=IBLOCK_SECTION_ID']);
         }
     }
 
@@ -375,16 +260,9 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
      */
     private function prepareDataForSave($data): array
     {
-        $searchKey = '_VALUE';
         $result = ['IBLOCK_ID' => $this->getIblockId()];
         foreach ($data as $key => $value) {
-            if (strpos($key, $searchKey) === false) {
-                $result[$key] = $value;
-                continue;
-            }
-
-            $k = str_replace($searchKey, '', $key);
-            $result['PROPERTY_VALUES'][$k] = $this->enableComplexProperty ? $this->getUpdatedProperty($value) : $value;
+            $result[$key] = $value;
         }
 
         return $result;
@@ -404,19 +282,19 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         /**
          * @psalm-suppress UndefinedClass
          */
-        $iblockElementInst = new CIBlockElement();
+        $iblockSectionInst = new \CIBlockSection();
         $dataForSave = $this->prepareDataForSave($data);
         $dataResult = ['data' => $dataForSave];
         if (!($query instanceof QueryCriteriaInterface)) {
             /**
              * @psalm-suppress UndefinedClass
              */
-            $id = (int) $iblockElementInst->Add($dataForSave, $this->useWorkflow, $this->useWorkflow);
+            $id = (int)$iblockSectionInst->Add($dataForSave);
             if ($id === 0) {
                 /**
                  * @psalm-suppress UndefinedClass
                  */
-                return new OperationResult($iblockElementInst->LAST_ERROR, $dataResult);
+                return new OperationResult($iblockSectionInst->LAST_ERROR, $dataResult);
             }
 
             /**
@@ -438,29 +316,19 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
 
         $mainResult = null;
         foreach ($pkListForSave as $id) {
-            $properties = $dataForSave['PROPERTY_VALUES'];
-            $fields = $dataForSave;
-            unset($fields['PROPERTY_VALUES']);
-
             $isSuccess = true;
-            if (!empty($fields)) {
+            if (!empty($dataForSave)) {
                 /**
                  * @psalm-suppress UndefinedClass
                  */
-                $isSuccess = (bool)$iblockElementInst->Update($id, $fields, $this->useWorkflow);
-            }
-
-            if ($this->partialPropertyUpdate) {
-                $iblockElementInst::SetPropertyValuesEx($id, $this->getIblockId(), $properties);
-            } else {
-                $iblockElementInst::SetPropertyValues($id, $this->getIblockId(), $properties);
+                $isSuccess = (bool)$iblockSectionInst->Update($id, $dataForSave);
             }
 
             /**
              * @psalm-suppress UndefinedClass
              */
             $updateResult = new OperationResult(
-                $isSuccess ? null : $iblockElementInst->LAST_ERROR,
+                $isSuccess ? null : $iblockSectionInst->LAST_ERROR,
                 $dataResult,
                 $id
             );
@@ -480,37 +348,6 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
     }
 
     /**
-     * @param mixed $property
-     * @return mixed
-     */
-    private function getUpdatedProperty($property)
-    {
-        if (!is_array($property)) {
-            return $property;
-        }
-
-        if ($this->hasStringKeys($property) && !array_key_exists('VALUE', $property)) {
-            return ['VALUE' => $property, 'DESCRIPTION' => $property['DESCRIPTION'] ?: ''];
-        } elseif (!$this->hasStringKeys($property)) {
-            foreach ($property as $k => $v) {
-                $property[$k] = $this->getUpdatedProperty($v);
-            }
-        }
-        return $property;
-    }
-
-    private function hasStringKeys(array $data): bool
-    {
-        foreach ($data as $key => $value) {
-            if (is_string($key)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * @return string
      * @throws SystemException
      */
@@ -525,7 +362,6 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
      */
     public function getDataCount(QueryCriteriaInterface $query = null): int
     {
-        $pkName = $this->getPkName();
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
         $defaultFilter = $this->defaultFilter;
         if (!empty($defaultFilter)) {
@@ -533,20 +369,8 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         }
 
         $filter = $params['filter'] ?? [];
-        $order = $params['order'] ?? [];
-        $el = new CIBlockElement();
-        $el->prepareSql([$pkName], $filter, false, $order);
-        $sql = "SELECT COUNT('*') as count FROM $el->sFrom WHERE 1=1 $el->sWhere";
-        $sql = str_replace(
-            "AND (((BE.WF_STATUS_ID=1 AND BE.WF_PARENT_ELEMENT_ID IS NULL)))",
-            "",
-            $sql
-        );
-
-        global $DB;
-        $res = $DB->Query($sql);
-        $res = $res->Fetch();
-        return (int)$res["count"];
+        $this->updateFilterForOldApi($filter);
+        return \CIBlockSection::GetCount($filter);
     }
 
     /**
@@ -573,7 +397,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         /**
          * @psalm-suppress UndefinedClass
          */
-        $resSelect = CIBlockElement::GetList([], $params['filter'], false, false, [$pkName]);
+        $resSelect = \CIBlockSection::GetList([], $params['filter'], false, [$pkName]);
         $result = [];
         while ($item = $resSelect->Fetch()) {
             $result[] = $item[$pkName];
@@ -601,10 +425,10 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             /**
              * @psalm-suppress UndefinedClass
              */
-            $isSuccess = CIBlockElement::Delete($pkValue);
+            $isSuccess = \CIBlockSection::Delete($pkValue);
             $updateResult = $isSuccess ?
                 new OperationResult('', $dataResult, $pkValue) :
-                new OperationResult("Ошибка удаление элемента #$pkValue", $dataResult, $pkValue);
+                new OperationResult("Ошибка удаления раздела #$pkValue", $dataResult, $pkValue);
 
             if ($mainResult instanceof OperationResultInterface) {
                 $mainResult->addNext($updateResult);
