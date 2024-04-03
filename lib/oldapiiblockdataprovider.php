@@ -366,6 +366,24 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             $filter['MIN_PERMISSION'] = $filter['=MIN_PERMISSION'];
             unset($filter['=MIN_PERMISSION']);
         }
+        $operationTypes = ['=', '<', '<=', '>', '>=', '==', ''];
+        foreach ($operationTypes as $operationType) {
+            if (array_key_exists("{$operationType}ACTIVE_FROM", $filter)) {
+                $filter["{$operationType}DATE_ACTIVE_FROM"] = $filter["{$operationType}ACTIVE_FROM"];
+                unset($filter["{$operationType}ACTIVE_FROM"]);
+            }
+        }
+        foreach ($operationTypes as $operationType) {
+            if (array_key_exists("{$operationType}ACTIVE_TO", $filter)) {
+                $filter["{$operationType}DATE_ACTIVE_TO"] = $filter["{$operationType}ACTIVE_TO"];
+                unset($filter["{$operationType}ACTIVE_TO"]);
+            }
+        }
+        foreach ($filter as $key => &$filterValue) {
+            if (is_int($key) && is_array($filterValue)) {
+                $this->updateFilterForOldApi($filterValue);
+            }
+        }
     }
 
     /**
