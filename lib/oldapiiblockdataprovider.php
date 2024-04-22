@@ -545,6 +545,10 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
     {
         $pkName = $this->getPkName();
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
+        $params = $this->prepareParams($params);
+        if (!empty($params['filter'])) {
+            $this->updateFilterForOldApi($params['filter']);
+        }
         $defaultFilter = $this->defaultFilter;
         if (!empty($defaultFilter)) {
             $params['filter'] = array_merge($params['filter'] ?? [], $defaultFilter);
