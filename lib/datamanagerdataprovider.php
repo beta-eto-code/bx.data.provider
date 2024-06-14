@@ -15,14 +15,12 @@ use Data\Provider\Interfaces\PkOperationResultInterface;
 use Data\Provider\Interfaces\QueryCriteriaInterface;
 use Data\Provider\OperationResult;
 use Data\Provider\Providers\BaseDataProvider;
-use Data\Provider\QueryCriteria;
 use EmptyIterator;
 use Exception;
 use Iterator;
 
 class DataManagerDataProvider extends BaseDataProvider
 {
-    protected const PK_LIST_DELIMITER = ',';
     /**
      * @var DataManager
      */
@@ -34,11 +32,10 @@ class DataManagerDataProvider extends BaseDataProvider
 
     /**
      * @param mixed $className
-     * @param string ...$pkName
+     * @param string $pkName
      */
-    public function __construct($className, string ...$pkName)
+    public function __construct($className, string $pkName = 'ID')
     {
-        $pkName = implode(static::PK_LIST_DELIMITER, $pkName ?: ['ID']);
         parent::__construct($pkName);
         $this->dataManagerClass = $className;
     }
@@ -83,46 +80,24 @@ class DataManagerDataProvider extends BaseDataProvider
      */
     protected function getPkValuesByQuery(BxQueryAdapter $bxQuery): array
     {
-        $pkList = $this->getPkList();
-        $params = $bxQuery->toArray();
-        $params['select'] = $pkList;
-        if (count($pkList) === 1) {
-            $pkName = current($pkList);
-            if (empty($pkName)) {
-                return [];
-            }
+        $pkName = $this->getPkName();
 
-            if ($bxQuery->isEqualPkQuery($pkName)) {
-                $result = $bxQuery->getPkValueFromQuery($pkName, CompareRuleInterface::EQUAL);
+        if ($bxQuery->isEqualPkQuery($pkName)) {
+            $result = $bxQuery->getPkValueFromQuery($pkName, CompareRuleInterface::EQUAL);
 
-                return empty($result) ? [] : (array)$result;
-            }
-
-            return array_column(
-                $this->dataManagerClass::getList($params)->fetchAll(),
-                $pkName
-            );
-        } elseif (count($pkList) > 1) {
-            $elements = $this->dataManagerClass::getList($params)->fetchAll();
-            $pkValues = [];
-            foreach ($elements as $element) {
-                $pkValue = [];
-                foreach ($element as $key => $value) {
-                    $pkValue[$key] = $value;
-                }
-                $pkValues[] = $pkValue;
-            }
-
-            return $pkValues;
+            return empty($result) ? [] : (array)$result;
         }
 
-        return [];
-    }
+        if (empty($pkName)) {
+            return [];
+        }
 
-    public function getPkList(): array
-    {
-        $pkName = $this->getPkName();
-        return empty($pkName) ? [] : explode(static::PK_LIST_DELIMITER, $pkName);
+        $params = $bxQuery->toArray();
+        $params['select'] = [$pkName];
+        return array_column(
+            $this->dataManagerClass::getList($params)->fetchAll(),
+            $pkName
+        );
     }
 
     /**
@@ -139,13 +114,7 @@ class DataManagerDataProvider extends BaseDataProvider
             $addResult = $this->dataManagerClass::add($dataForSave);
             if ($addResult->isSuccess()) {
                 $pkValue = $addResult->getId();
-                if (is_array($pkValue)) {
-                    foreach ($pkValue as $name => $value) {
-                        $data[$name] = $value;
-                    }
-                } else {
-                    $data[$this->getPkName() ?? 'ID'] = $pkValue;
-                }
+                $data[$this->getPkName() ?? 'ID'] = $pkValue;
 
                 return new OperationResult(null, $dataResult, $pkValue);
             }
@@ -291,72 +260,5 @@ class DataManagerDataProvider extends BaseDataProvider
         $connectionName = $this->dataManagerClass::getConnectionName();
         Application::getConnection($connectionName)->rollbackTransaction();
         return true;
-    }
-
-    /**
-     * @param array|ArrayObject $data
-     * @return void
-     */
-    public function clearPk(&$data)
-    {
-        foreach ($this->getPkList() as $pkName) {
-            if (!empty($pkName)) {
-                unset($data[$pkName]);
-            }
-        }
-    }
-
-    /**
-     * @param array|ArrayObject $data
-     * @return mixed
-     */
-    public function getPkValue($data)
-    {
-        if (empty($this->getPkName())) {
-            return null;
-        }
-
-        $pkValues = [];
-        foreach ($this->getPkList() as $pkName) {
-            if (!empty($pkName) && isset($data[$pkName])) {
-                $pkValues[$pkName] = $data[$pkName];
-            }
-        }
-        if (count($pkValues) === 1) {
-            return current($pkValues);
-        } elseif (count($pkValues) > 1) {
-            return $pkValues;
-        }
-
-        return null;
-    }
-
-    /**
-     * @param array|ArrayObject $data
-     *
-     * @return QueryCriteria|null
-     */
-    public function createPkQuery($data): ?QueryCriteriaInterface
-    {
-        $pkName = $this->getPkName();
-        if (empty($pkName)) {
-            return null;
-        }
-
-        $pkValue = $this->getPkValue($data);
-        if (empty($pkValue)) {
-            return null;
-        }
-
-        $query = new QueryCriteria();
-        if (is_array($pkValue)) {
-            foreach ($pkValue as $name => $value) {
-                $query->addCriteria($name, CompareRuleInterface::EQUAL, $value);
-            }
-        } else {
-            $query->addCriteria($pkName, CompareRuleInterface::EQUAL, $pkValue);
-        }
-
-        return $query;
     }
 }
