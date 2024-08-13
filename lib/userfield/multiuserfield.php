@@ -41,7 +41,7 @@ class MultiUserField extends ArrayField
         switch ($fieldTypesMap[$this->fieldType] ?? '') {
             case CUserTypeManager::BASE_TYPE_INT:
             case CUserTypeManager::BASE_TYPE_FILE:
-            return $utmFieldName . '.' . 'VALUE_INT';
+                return $utmFieldName . '.' . 'VALUE_INT';
             case CUserTypeManager::BASE_TYPE_DOUBLE:
                 return $utmFieldName . '.' . 'VALUE_DOUBLE';
             case CUserTypeManager::BASE_TYPE_DATETIME:

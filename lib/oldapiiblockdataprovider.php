@@ -274,7 +274,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         $res->SetIBlockTag($el->arFilterIBlocks);
         $res->arIBlockMultProps = $el->arIBlockMultProps;
         $res->arIBlockConvProps = $el->arIBlockConvProps;
-        $res->arIBlockAllProps  = $el->arIBlockAllProps;
+        $res->arIBlockAllProps = $el->arIBlockAllProps;
         $res->arIBlockNumProps = $el->arIBlockNumProps;
         $res->arIBlockLongProps = $el->arIBlockLongProps;
 
@@ -429,7 +429,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             /**
              * @psalm-suppress UndefinedClass
              */
-            $id = (int) $iblockElementInst->Add($dataForSave, $this->useWorkflow, $this->useWorkflow);
+            $id = (int)$iblockElementInst->Add($dataForSave, $this->useWorkflow, $this->useWorkflow);
             if ($id === 0) {
                 /**
                  * @psalm-suppress UndefinedClass
