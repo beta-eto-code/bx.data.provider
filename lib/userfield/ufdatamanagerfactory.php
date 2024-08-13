@@ -208,7 +208,7 @@ class UfDataManagerFactory
         return $ufDataManager;
     }
 
-    static public function createUTMUFDataManager(string $entityId): DataManager
+    public static function createUTMUFDataManager(string $entityId): DataManager
     {
         $ufDataManager = new class extends DataManager {
             public static string $entityId = '';
@@ -306,7 +306,7 @@ class UfDataManagerFactory
      * @throws SystemException
      * @throws ArgumentException
      */
-    static private function getUFConfig(string $entityId): array
+    private static function getUFConfig(string $entityId): array
     {
         return UserFieldTable::getList([
             'select' => [
@@ -328,7 +328,7 @@ class UfDataManagerFactory
     /**
      * @throws SystemException
      */
-    static private function createFieldByConfig(array $fieldConfig, Entity $utmEntity): ScalarField
+    private static function createFieldByConfig(array $fieldConfig, Entity $utmEntity): ScalarField
     {
         $fieldId = (int)($fieldConfig['ID'] ?? 0);
         $fieldName = $fieldConfig['FIELD_NAME'] ?? '';
@@ -348,7 +348,7 @@ class UfDataManagerFactory
     /**
      * @throws SystemException
      */
-    static private function createField(
+    private static function createField(
         string $fieldName,
         string $fieldType,
         int $fieldId,
@@ -380,7 +380,7 @@ class UfDataManagerFactory
         }
     }
 
-    static public function getFieldTypesMap(): array
+    public static function getFieldTypesMap(): array
     {
         if (!is_null(static::$fieldTypesMap)) {
             return static::$fieldTypesMap;
