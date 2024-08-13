@@ -113,7 +113,7 @@ class UfDataManagerFactory
             {
                 [$prefix, $fieldName] = static::parseFilterName($name);
                 $field = static::findMultiUserFieldByFieldName($fieldName);
-                return $field instanceof MultiUserField ? $prefix.$field->getFieldNameForFilter() : $name;
+                return $field instanceof MultiUserField ? $prefix . $field->getFieldNameForFilter() : $name;
             }
 
             private static function findMultiUserFieldByFieldName(string $fieldName): ?MultiUserField
@@ -157,8 +157,7 @@ class UfDataManagerFactory
 
             public static function getEntity()
             {
-                if (!isset(static::$entity[static::$entityId]))
-                {
+                if (!isset(static::$entity[static::$entityId])) {
                     throw new Exception('OMG! Entity is not init!');
                 }
 
@@ -211,7 +210,6 @@ class UfDataManagerFactory
 
     static public function createUTMUFDataManager(string $entityId): DataManager
     {
-
         $ufDataManager = new class extends DataManager {
             public static string $entityId = '';
             public static string $tableName = '';
@@ -277,8 +275,7 @@ class UfDataManagerFactory
 
             public static function getEntity()
             {
-                if (!isset(static::$entity[static::$entityId]))
-                {
+                if (!isset(static::$entity[static::$entityId])) {
                     throw new Exception('OMG! Entity is not init!');
                 }
 
@@ -333,7 +330,7 @@ class UfDataManagerFactory
      */
     static private function createFieldByConfig(array $fieldConfig, Entity $utmEntity): ScalarField
     {
-        $fieldId = (int) ($fieldConfig['ID'] ?? 0);
+        $fieldId = (int)($fieldConfig['ID'] ?? 0);
         $fieldName = $fieldConfig['FIELD_NAME'] ?? '';
         $fieldType = $fieldConfig['USER_TYPE_ID'] ?? '';
         $isRequired = ($fieldConfig['MANDATORY'] ?? 'N') === 'Y';
