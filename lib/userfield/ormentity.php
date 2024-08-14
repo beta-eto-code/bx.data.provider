@@ -36,36 +36,29 @@ class ORMEntity extends Entity
         $this->name = substr(end($classPath), 0, -5);
 
         // default db table name
-        if (is_null($this->dbTableName))
-        {
+        if (is_null($this->dbTableName)) {
             $_classPath = array_slice($classPath, 0, -1);
 
             $this->dbTableName = 'b_';
 
-            foreach ($_classPath as $i => $_pathElem)
-            {
-                if ($i == 0 && $_pathElem == 'Bitrix')
-                {
+            foreach ($_classPath as $i => $_pathElem) {
+                if ($i == 0 && $_pathElem == 'Bitrix') {
                     // skip bitrix namespace
                     continue;
                 }
 
-                if ($i == 1 && $_pathElem == 'Main')
-                {
+                if ($i == 1 && $_pathElem == 'Main') {
                     // also skip Main module
                     continue;
                 }
 
-                $this->dbTableName .= strtolower($_pathElem).'_';
+                $this->dbTableName .= strtolower($_pathElem) . '_';
             }
 
             // add class
-            if ($this->name !== end($_classPath))
-            {
+            if ($this->name !== end($_classPath)) {
                 $this->dbTableName .= StringHelper::camel2snake($this->name);
-            }
-            else
-            {
+            } else {
                 $this->dbTableName = substr($this->dbTableName, 0, -1);
             }
         }
@@ -74,34 +67,28 @@ class ORMEntity extends Entity
         $this->references = array();
 
         // attributes
-        foreach ($this->fieldsMap as $fieldName => &$fieldInfo)
-        {
+        foreach ($this->fieldsMap as $fieldName => &$fieldInfo) {
             $this->addField($fieldInfo, $fieldName);
         }
 
-        if (!empty($this->fieldsMap) && empty($this->primary))
-        {
+        if (!empty($this->fieldsMap) && empty($this->primary)) {
             throw new SystemException(sprintf('Primary not found for %s Entity', $this->name));
         }
 
         // attach userfields
-        if (empty($this->uf_id))
-        {
+        if (empty($this->uf_id)) {
             // try to find ENTITY_ID by map
             $userTypeManager = Application::getUserTypeManager();
-            if($userTypeManager instanceof \CUserTypeManager)
-            {
+            if ($userTypeManager instanceof \CUserTypeManager) {
                 $entityList = $userTypeManager->getEntityList();
                 $ufId = is_array($entityList) ? array_search($this->className, $entityList) : false;
-                if ($ufId !== false)
-                {
+                if ($ufId !== false) {
                     $this->uf_id = $ufId;
                 }
             }
         }
 
-        if (!empty($this->uf_id))
-        {
+        if (!empty($this->uf_id)) {
             // attach uf fields and create uts/utm entities
             UserFieldTable::attachFields($this, $this->uf_id);
 

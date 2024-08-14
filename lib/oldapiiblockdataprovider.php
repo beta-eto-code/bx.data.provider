@@ -274,7 +274,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         $res->SetIBlockTag($el->arFilterIBlocks);
         $res->arIBlockMultProps = $el->arIBlockMultProps;
         $res->arIBlockConvProps = $el->arIBlockConvProps;
-        $res->arIBlockAllProps  = $el->arIBlockAllProps;
+        $res->arIBlockAllProps = $el->arIBlockAllProps;
         $res->arIBlockNumProps = $el->arIBlockNumProps;
         $res->arIBlockLongProps = $el->arIBlockLongProps;
 
@@ -429,7 +429,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
             /**
              * @psalm-suppress UndefinedClass
              */
-            $id = (int) $iblockElementInst->Add($dataForSave, $this->useWorkflow, $this->useWorkflow);
+            $id = (int)$iblockElementInst->Add($dataForSave, $this->useWorkflow, $this->useWorkflow);
             if ($id === 0) {
                 /**
                  * @psalm-suppress UndefinedClass
@@ -545,6 +545,10 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
     {
         $pkName = $this->getPkName();
         $params = empty($query) ? [] : BxQueryAdapter::init($query)->toArray();
+        $params = $this->prepareParams($params);
+        if (!empty($params['filter'])) {
+            $this->updateFilterForOldApi($params['filter']);
+        }
         $defaultFilter = $this->defaultFilter;
         if (!empty($defaultFilter)) {
             $params['filter'] = array_merge($params['filter'] ?? [], $defaultFilter);
@@ -555,11 +559,13 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         $el = new CIBlockElement();
         $el->prepareSql([$pkName], $filter, false, $order);
         $sql = "SELECT COUNT('*') as count FROM $el->sFrom WHERE 1=1 $el->sWhere";
-        $sql = str_replace(
-            "AND (((BE.WF_STATUS_ID=1 AND BE.WF_PARENT_ELEMENT_ID IS NULL)))",
-            "",
-            $sql
-        );
+        if (!$this->useWorkflow) {
+            $sql = str_replace(
+                "AND (((BE.WF_STATUS_ID=1 AND BE.WF_PARENT_ELEMENT_ID IS NULL)))",
+                "",
+                $sql
+            );
+        }
 
         global $DB;
         $res = $DB->Query($sql);

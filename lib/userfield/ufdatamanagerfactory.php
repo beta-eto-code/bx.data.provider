@@ -113,7 +113,7 @@ class UfDataManagerFactory
             {
                 [$prefix, $fieldName] = static::parseFilterName($name);
                 $field = static::findMultiUserFieldByFieldName($fieldName);
-                return $field instanceof MultiUserField ? $prefix.$field->getFieldNameForFilter() : $name;
+                return $field instanceof MultiUserField ? $prefix . $field->getFieldNameForFilter() : $name;
             }
 
             private static function findMultiUserFieldByFieldName(string $fieldName): ?MultiUserField
@@ -157,8 +157,7 @@ class UfDataManagerFactory
 
             public static function getEntity()
             {
-                if (!isset(static::$entity[static::$entityId]))
-                {
+                if (!isset(static::$entity[static::$entityId])) {
                     throw new Exception('OMG! Entity is not init!');
                 }
 
@@ -209,9 +208,8 @@ class UfDataManagerFactory
         return $ufDataManager;
     }
 
-    static public function createUTMUFDataManager(string $entityId): DataManager
+    public static function createUTMUFDataManager(string $entityId): DataManager
     {
-
         $ufDataManager = new class extends DataManager {
             public static string $entityId = '';
             public static string $tableName = '';
@@ -277,8 +275,7 @@ class UfDataManagerFactory
 
             public static function getEntity()
             {
-                if (!isset(static::$entity[static::$entityId]))
-                {
+                if (!isset(static::$entity[static::$entityId])) {
                     throw new Exception('OMG! Entity is not init!');
                 }
 
@@ -309,7 +306,7 @@ class UfDataManagerFactory
      * @throws SystemException
      * @throws ArgumentException
      */
-    static private function getUFConfig(string $entityId): array
+    private static function getUFConfig(string $entityId): array
     {
         return UserFieldTable::getList([
             'select' => [
@@ -331,9 +328,9 @@ class UfDataManagerFactory
     /**
      * @throws SystemException
      */
-    static private function createFieldByConfig(array $fieldConfig, Entity $utmEntity): ScalarField
+    private static function createFieldByConfig(array $fieldConfig, Entity $utmEntity): ScalarField
     {
-        $fieldId = (int) ($fieldConfig['ID'] ?? 0);
+        $fieldId = (int)($fieldConfig['ID'] ?? 0);
         $fieldName = $fieldConfig['FIELD_NAME'] ?? '';
         $fieldType = $fieldConfig['USER_TYPE_ID'] ?? '';
         $isRequired = ($fieldConfig['MANDATORY'] ?? 'N') === 'Y';
@@ -351,7 +348,7 @@ class UfDataManagerFactory
     /**
      * @throws SystemException
      */
-    static private function createField(
+    private static function createField(
         string $fieldName,
         string $fieldType,
         int $fieldId,
@@ -383,7 +380,7 @@ class UfDataManagerFactory
         }
     }
 
-    static public function getFieldTypesMap(): array
+    public static function getFieldTypesMap(): array
     {
         if (!is_null(static::$fieldTypesMap)) {
             return static::$fieldTypesMap;

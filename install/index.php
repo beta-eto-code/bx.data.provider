@@ -17,7 +17,7 @@ class bx_data_provider extends CModule
 
     public function __construct()
     {
-        $this->MODULE_VERSION = "1.18.4";
+        $this->MODULE_VERSION = "1.20.1";
         $this->MODULE_VERSION_DATE = "2024-06-06";
         $this->MODULE_NAME = "Провайдер данных";
         $this->MODULE_DESCRIPTION = "Провайдер данных";
