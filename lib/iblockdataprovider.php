@@ -25,11 +25,11 @@ class IblockDataProvider extends DataManagerDataProvider implements IblockDataPr
     /**
      * @var ElementEntity
      */
-    private $elementEntity;
+    protected $elementEntity;
     /**
      * @var EntityObject|null
      */
-    private $iblock;
+    protected $iblock;
 
     /**
      * @param string $iblockType
