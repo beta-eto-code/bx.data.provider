@@ -298,10 +298,7 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
 
         $filter = $params['filter'] ?? [];
         if (!empty($filter)) {
-            foreach ($filter as $code => $value) {
-                $code = $this->prepareCode($code, false);
-                $result['filter'][$code] = $value;
-            }
+            $result['filter'] = $this->getPreparedFilter($filter);
         }
 
         $select = $params['select'] ?? [];
@@ -321,6 +318,21 @@ class OldApiIblockDataProvider extends BaseDataProvider implements IblockDataPro
         }
 
         return $result;
+    }
+
+    private function getPreparedFilter($filter): array
+    {
+        $newFilter = [];
+        foreach ($filter as $code => $value) {
+            if (is_int($code) && is_array($value)) {
+                $newFilter[$code] = $this->getPreparedFilter($value);
+            } else {
+                $newCode = $this->prepareCode($code, false);
+                $newFilter[$newCode] = $value;
+            }
+        }
+
+        return $newFilter;
     }
 
     /**
