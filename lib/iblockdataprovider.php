@@ -219,7 +219,11 @@ class IblockDataProvider extends DataManagerDataProvider implements IblockDataPr
         foreach ($pkListForUpdate as $pkValue) {
             $item = $this->initItem($data, (int)$pkValue);
             $bxResult = $item->save();
-            $saveResult = $bxResult->isSuccess() ?
+            $isSuccess = $bxResult->isSuccess();
+            if ($isSuccess) {
+                $this->updateMultiValueProps($item, $data);
+            }
+            $saveResult = $isSuccess ?
                 new OperationResult('', $dataResult, $pkValue) :
                 new OperationResult(implode(', ', $bxResult->getErrorMessages()), $dataResult, $pkValue);
 
